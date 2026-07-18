@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -52,5 +53,33 @@ class User extends Authenticatable
             'last_login_at' => 'immutable_datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class)->withTimestamps();
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return $this->roles()->where('slug', $role)->exists();
+    }
+
+    public function hasPermissionTo(string $permission): bool
+    {
+        return $this->roles()
+            ->whereHas('permissions', fn ($query) => $query->where('slug', $permission))
+            ->exists();
+    }
+
+    public function assignRole(string|Role $role): void
+    {
+        $roleId = $role instanceof Role
+            ? $role->getKey()
+            : Role::query()->where('slug', $role)->value('id');
+
+        if ($roleId !== null) {
+            $this->roles()->syncWithoutDetaching([$roleId]);
+        }
     }
 }

@@ -13,4 +13,6 @@ interface IdentityProvider
     public function exchangeAuthorizationCode(string $code, string $codeVerifier): SsoTokenSet;
 
     public function profile(SsoTokenSet $tokens): SsoProfile;
+
+    public function revoke(string $token): void;
 }

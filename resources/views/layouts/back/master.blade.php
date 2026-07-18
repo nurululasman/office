@@ -1,25 +1,26 @@
 <!doctype html>
-<!--
-* Tabler - Premium and Open Source dashboard template with responsive and high quality UI.
-* @version 1.0.0-beta20
-* @link https://tabler.io
-* Copyright 2018-2023 The Tabler Authors
-* Copyright 2018-2023 codecalm.net Paweł Kuna
-* Licensed under MIT (https://github.com/tabler/tabler/blob/master/LICENSE)
--->
-<html lang="en">
+<html lang="id">
     @include('layouts.back.header')
-    <body class=" layout-fluid">
+    <body class="layout-fluid">
         <div class="page">
             @include('layouts.back.top')
             @include('layouts.back.menu')
-            <div class="page-wrapper">
+            <main class="page-wrapper">
+                @if(session('status'))
+                    <div class="container-xl mt-3">
+                        <div class="alert alert-success" role="status">{{ session('status') }}</div>
+                    </div>
+                @endif
+                @if($errors->any())
+                    <div class="container-xl mt-3">
+                        <div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>
+                    </div>
+                @endif
                 @yield('content')
                 @include('layouts.back.footer')
-            </div>
-            @yield('modal')
+            </main>
         </div>
         @include('layouts.back.script')
-        @yield('script')
+        @stack('scripts')
     </body>
 </html>

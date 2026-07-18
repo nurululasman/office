@@ -9,6 +9,7 @@ use App\Services\Identity\JbluSsoIdentityProvider;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use League\OAuth2\Client\Token\AccessToken;
 use Tests\TestCase;
@@ -96,6 +97,24 @@ class JbluSsoIdentityProviderTest extends TestCase
         $this->expectExceptionMessage('Tenant profil SSO tidak sesuai');
 
         $provider->profile(new SsoTokenSet(new AccessToken(['access_token' => 'access-token'])));
+    }
+
+    public function test_it_revokes_the_refresh_token_with_confidential_client_authentication(): void
+    {
+        $history = [];
+        $stack = HandlerStack::create(new MockHandler([
+            new Response(200, ['Content-Type' => 'application/json'], '{}'),
+        ]));
+        $stack->push(Middleware::history($history));
+        $provider = new JbluSsoIdentityProvider(new Client(['handler' => $stack]));
+
+        $provider->revoke('refresh-token-secret');
+
+        $request = $history[0]['request'];
+        $this->assertSame('POST', $request->getMethod());
+        $this->assertSame('/oauth/revoke', $request->getUri()->getPath());
+        $this->assertStringStartsWith('Basic ', $request->getHeaderLine('Authorization'));
+        $this->assertSame('token=refresh-token-secret', (string) $request->getBody());
     }
 
     /** @param list<Response> $responses */

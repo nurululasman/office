@@ -452,9 +452,9 @@ Status: `[ ]` belum selesai, `[~]` sedang dikerjakan, `[x]` selesai. Kerjakan be
 
 - [x] `OFF-0101` Konfigurasi PostgreSQL, database queue (`default` dan `pdf`), private local storage, Vite/Alpine, linting, dan CI. Bukti implementasi dan verifikasi: [`OFF-0101`](docs/implementation/OFF-0101-FOUNDATION.md).
 - [x] `OFF-0102` Implementasi migration user serta integrasi `league/oauth2-client` Authorization Code + PKCE sesuai kontrak `OFF-0001`, termasuk adapter `/api/v1/auth/me` dan prerequisite login-entry pada SSO. Bukti implementasi dan verifikasi: [`OFF-0102`](docs/implementation/OFF-0102-SSO-CLIENT.md).
-- [ ] `OFF-0103` Implementasi provisioning/update profil, user aktif/nonaktif, logout, dan session expiry.
-- [ ] `OFF-0104` Implementasi role, permission, policy, dan seeder administrator awal.
-- [ ] `OFF-0105` Implementasi layout aplikasi, dashboard, error page, audit login, dan health check.
+- [x] `OFF-0103` Implementasi provisioning/update profil, user aktif/nonaktif, logout, dan session expiry. Bukti implementasi dan verifikasi: [`OFF-0103`](docs/implementation/OFF-0103-SSO-SESSION-LIFECYCLE.md).
+- [x] `OFF-0104` Implementasi role, permission, policy, dan seeder administrator awal. Bukti implementasi dan verifikasi: [`OFF-0104`](docs/implementation/OFF-0104-AUTHORIZATION.md).
+- [x] `OFF-0105` Implementasi layout aplikasi, dashboard, error page, audit login, dan health check. Bukti implementasi dan verifikasi: [`OFF-0105`](docs/implementation/OFF-0105-APPLICATION-SHELL-AND-OPERATIONS.md).
 
 **Acceptance criteria:** user SSO valid dapat login; user tidak aktif ditolak; route terlindungi; role diuji otomatis; secret tidak masuk repository; CI hijau.
 

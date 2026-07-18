@@ -20,6 +20,17 @@
         @endif
     </head>
     <body class="bg-[#FDFDFC] dark:bg-[#0a0a0a] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
+        @if($errors->has('sso'))
+            <div role="alert" class="w-full max-w-[335px] lg:max-w-4xl mb-4 rounded-sm border border-[#f53003] bg-[#fff2f2] p-6 text-[#b42318]">
+                {{ $errors->first('sso') }}
+            </div>
+        @endif
+
+        @if(session('status'))
+            <div role="status" class="w-full max-w-[335px] lg:max-w-4xl mb-4 rounded-sm border border-[#3e7b27] bg-white p-6 text-[#245b16]">
+                {{ session('status') }}
+            </div>
+        @endif
         <header class="w-full lg:max-w-4xl max-w-[335px] text-sm mb-6 not-has-[nav]:hidden">
             @if (Route::has('login'))
                 <nav class="flex items-center justify-end gap-4">

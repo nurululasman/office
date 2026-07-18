@@ -7,6 +7,7 @@ use App\Data\Identity\AuthorizationRequest;
 use App\Data\Identity\SsoProfile;
 use App\Data\Identity\SsoTokenSet;
 use App\Exceptions\IdentityProviderException;
+use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use League\OAuth2\Client\Provider\GenericProvider;
 use League\OAuth2\Client\Provider\GenericResourceOwner;
@@ -18,12 +19,15 @@ final class JbluSsoIdentityProvider implements IdentityProvider
 {
     private GenericProvider $provider;
 
+    private ClientInterface $httpClient;
+
     public function __construct(?ClientInterface $httpClient = null)
     {
         $baseUrl = (string) config('sso.base_url');
         $this->assertConfigured($baseUrl);
 
-        $collaborators = $httpClient === null ? [] : ['httpClient' => $httpClient];
+        $this->httpClient = $httpClient ?? new Client;
+        $collaborators = ['httpClient' => $this->httpClient];
         $this->provider = new GenericProvider([
             'clientId' => config('sso.client_id'),
             'clientSecret' => config('sso.client_secret'),
@@ -102,6 +106,19 @@ final class JbluSsoIdentityProvider implements IdentityProvider
             name: trim($user['username']),
             avatarUrl: isset($user['avatar_url']) && is_string($user['avatar_url']) ? $user['avatar_url'] : null,
         );
+    }
+
+    public function revoke(string $token): void
+    {
+        try {
+            $this->httpClient->request('POST', config('sso.base_url').config('sso.paths.revoke'), [
+                'auth' => [config('sso.client_id'), config('sso.client_secret')],
+                'form_params' => ['token' => $token],
+                'headers' => ['Accept' => 'application/json'],
+            ]);
+        } catch (Throwable $exception) {
+            throw new IdentityProviderException('Token SSO tidak dapat dicabut.', previous: $exception);
+        }
     }
 
     private function assertConfigured(string $baseUrl): void
