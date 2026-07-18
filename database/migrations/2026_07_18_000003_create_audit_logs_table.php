@@ -12,7 +12,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('action')->index();
-            $table->nullableMorphs('subject');
+            // String accommodates both the legacy numeric User key and UUID domain keys.
+            $table->string('subject_type')->nullable();
+            $table->string('subject_id')->nullable();
+            $table->index(['subject_type', 'subject_id']);
             $table->jsonb('before')->nullable();
             $table->jsonb('after')->nullable();
             $table->jsonb('context')->nullable();

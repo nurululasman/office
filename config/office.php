@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'quotation_document_type_code' => env('OFFICE_QUOTATION_DOCUMENT_TYPE_CODE', 'QUOTATION'),
     'business_timezone' => env('OFFICE_BUSINESS_TIMEZONE', 'Asia/Jakarta'),
 
     'documents' => [

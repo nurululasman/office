@@ -153,7 +153,7 @@ Nomor yang sudah terbit tidak dihapus dan tidak dipakai ulang. Kesalahan adminis
 
 #### `quotations`
 
-- `id`, `document_id` nullable dan unique;
+- `id`, `document_id` nullable dan unique, `created_by`, `template_id`;
 - `status`: `draft`, `pending_approval`, `rejected`, `complete`, `void`;
 - `approval_mode` snapshot: `direct` atau `maker_checker`;
 - `quotation_date`, `subject`;
@@ -460,23 +460,23 @@ Status: `[ ]` belum selesai, `[~]` sedang dikerjakan, `[x]` selesai. Kerjakan be
 
 ### Fase 2 - Tipe dokumen dan mesin penomoran
 
-- [ ] `OFF-0201` Migration/model `document_types`, `document_sequences`, `documents`, dan audit logs beserta seluruh constraint.
-- [ ] `OFF-0202` CRUD tipe dokumen dengan segment builder, validasi literal/token, preview pola, dan aktivasi/nonaktivasi.
-- [ ] `OFF-0203` Implementasi `DocumentNumberIssuer` transactional, atomic, dan idempotent.
-- [ ] `OFF-0204` Halaman penerbitan nomor surat umum: tipe, judul, peruntukan, hasil copyable.
-- [ ] `OFF-0205` Register nomor dengan filter/pencarian, detail audit, serta aksi void berizin.
-- [ ] `OFF-0206` Test pergantian tahun, paralel lintas tipe, request bersamaan, retry, rollback, dan nomor tidak digunakan ulang.
+- [x] `OFF-0201` Migration/model `document_types`, `document_sequences`, `documents`, dan audit logs beserta seluruh constraint. Bukti implementasi dan verifikasi: [`OFF-0201`](docs/implementation/OFF-0201-DOCUMENT-REGISTRY-SCHEMA.md).
+- [x] `OFF-0202` CRUD tipe dokumen dengan segment builder, validasi literal/token, preview pola, dan aktivasi/nonaktivasi. Bukti implementasi dan verifikasi: [`OFF-0202`](docs/implementation/OFF-0202-DOCUMENT-TYPE-MANAGEMENT.md).
+- [x] `OFF-0203` Implementasi `DocumentNumberIssuer` transactional, atomic, dan idempotent. Bukti implementasi dan verifikasi: [`OFF-0203`](docs/implementation/OFF-0203-DOCUMENT-NUMBER-ISSUER.md).
+- [x] `OFF-0204` Halaman penerbitan nomor surat umum: tipe, judul, peruntukan, hasil copyable. Bukti implementasi dan verifikasi: [`OFF-0204`](docs/implementation/OFF-0204-GENERAL-DOCUMENT-ISSUANCE.md).
+- [x] `OFF-0205` Register nomor dengan filter/pencarian, detail audit, serta aksi void berizin. Bukti implementasi dan verifikasi: [`OFF-0205`](docs/implementation/OFF-0205-DOCUMENT-REGISTER-AND-VOID.md).
+- [x] `OFF-0206` Test pergantian tahun, paralel lintas tipe, request bersamaan, retry, rollback, dan nomor tidak digunakan ulang. Bukti implementasi dan verifikasi: [`OFF-0206`](docs/implementation/OFF-0206-POSTGRES-CONCURRENCY-GATE.md).
 
 **Acceptance criteria:** tidak ada nomor ganda untuk tipe dan periode yang sama pada uji concurrency di database target; format dengan atau tanpa tahun dapat diterbitkan; sequence tipe A tidak memengaruhi tipe B; nomor pertama tahun baru adalah 1; nomor void tetap tercatat; semua policy lulus.
 
 ### Fase 3 - Quotation draft dan completion
 
-- [ ] `OFF-0301` Migration/model quotation, items, item values key-value, terms, template version, dan generated files.
-- [ ] `OFF-0302` Form/list/detail draft quotation dengan kolom dan item dinamis serta validasi berdasarkan `value_type`.
-- [ ] `OFF-0303` Preview draft ber-watermark dan formatter tanggal/IDR.
-- [ ] `OFF-0304` Implementasi direct completion yang diaudit serta submit/maker-checker approval; kedua jalur melakukan completion dan penerbitan nomor dalam satu transaksi dengan optimistic/pessimistic locking.
-- [ ] `OFF-0305` Kunci editing setelah complete, implementasi void beralasan, dan audit trail.
-- [ ] `OFF-0306` Test mode direct dan maker-checker, audit bypass, seluruh permission, larangan self-approval saat berlaku, double-click/retry, stale edit, dan rollback.
+- [x] `OFF-0301` Migration/model quotation, items, item values key-value, terms, template version, dan generated files. Bukti implementasi dan verifikasi: [`OFF-0301`](docs/implementation/OFF-0301-QUOTATION-SCHEMA.md).
+- [x] `OFF-0302` Form/list/detail draft quotation dengan kolom dan item dinamis serta validasi berdasarkan `value_type`. Bukti implementasi dan verifikasi: [`OFF-0302`](docs/implementation/OFF-0302-QUOTATION-DRAFT-MANAGEMENT.md).
+- [x] `OFF-0303` Preview draft ber-watermark dan formatter tanggal/IDR. Bukti implementasi dan verifikasi: [`OFF-0303`](docs/implementation/OFF-0303-DRAFT-PREVIEW-AND-FORMATTERS.md).
+- [x] `OFF-0304` Implementasi direct completion yang diaudit serta submit/maker-checker approval; kedua jalur melakukan completion dan penerbitan nomor dalam satu transaksi dengan optimistic/pessimistic locking. Bukti implementasi dan verifikasi: [`OFF-0304`](docs/implementation/OFF-0304-QUOTATION-COMPLETION-AND-APPROVAL.md).
+- [x] `OFF-0305` Kunci editing setelah complete, implementasi void beralasan, dan audit trail. Bukti implementasi dan verifikasi: [`OFF-0305`](docs/implementation/OFF-0305-IMMUTABILITY-VOID-AND-AUDIT.md).
+- [x] `OFF-0306` Test mode direct dan maker-checker, audit bypass, seluruh permission, larangan self-approval saat berlaku, double-click/retry, stale edit, dan rollback. Bukti implementasi dan verifikasi: [`OFF-0306`](docs/implementation/OFF-0306-QUOTATION-WORKFLOW-GATE.md).
 
 **Acceptance criteria:** draft/pending approval tidak memiliki nomor; mode direct mengizinkan maker complete sendiri dan mencatat bypass; mode maker-checker melarang self-approval; item dapat menggunakan key selain `rate_20`/`rate_40` tanpa perubahan schema; completion hanya menerbitkan satu nomor walau dipanggil berulang/bersamaan; data complete immutable; seluruh perubahan penting diaudit.
 

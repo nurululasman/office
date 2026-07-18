@@ -8,14 +8,15 @@
                             <span class="nav-link-title">Dashboard</span>
                         </a>
                     </li>
-                    @canany(['documents.read', 'documents.issue'])
-                        <li class="nav-item">
-                            <span class="nav-link disabled" aria-disabled="true"><span class="nav-link-title">Register Dokumen</span></span>
-                        </li>
-                    @endcanany
+                    @can('documents.read')
+                        <li class="nav-item {{ request()->routeIs('documents.index', 'documents.show') ? 'active' : '' }}"><a class="nav-link" href="{{ route('documents.index') }}"><span class="nav-link-title">Register Dokumen</span></a></li>
+                    @endcan
+                    @can('documents.issue')
+                        <li class="nav-item {{ request()->routeIs('documents.create', 'documents.issued') ? 'active' : '' }}"><a class="nav-link" href="{{ route('documents.create') }}"><span class="nav-link-title">Terbitkan Nomor</span></a></li>
+                    @endcan
                     @can('quotations.read')
-                        <li class="nav-item">
-                            <span class="nav-link disabled" aria-disabled="true"><span class="nav-link-title">Quotation</span></span>
+                        <li class="nav-item {{ request()->routeIs('quotations.*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('quotations.index') }}"><span class="nav-link-title">Quotation</span></a>
                         </li>
                     @endcan
                     @can('contracts.read')
@@ -23,11 +24,11 @@
                             <span class="nav-link disabled" aria-disabled="true"><span class="nav-link-title">Kontrak</span></span>
                         </li>
                     @endcan
-                    @canany(['document-types.read', 'templates.read', 'users.read', 'roles.read'])
-                        <li class="nav-item">
-                            <span class="nav-link disabled" aria-disabled="true"><span class="nav-link-title">Administrasi</span></span>
+                    @can('document-types.read')
+                        <li class="nav-item {{ request()->routeIs('document-types.*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('document-types.index') }}"><span class="nav-link-title">Tipe Dokumen</span></a>
                         </li>
-                    @endcanany
+                    @endcan
                 </ul>
             </div>
         </div>

@@ -1,0 +1,18 @@
+@extends('layouts.back.master')
+
+@section('title', 'Detail Dokumen')
+
+@section('content')
+    <div class="page-header d-print-none"><div class="container-xl"><div class="row g-2 align-items-center">
+        <div class="col"><div class="page-pretitle">Register Dokumen</div><h1 class="page-title">Detail Nomor</h1></div>
+        <div class="col-auto ms-auto"><a href="{{ route('documents.index') }}" class="btn">Kembali ke register</a></div>
+    </div></div></div>
+    <div class="page-body"><div class="container-xl"><div class="row row-cards">
+        <div class="col-lg-8"><div class="card"><div class="card-body">
+            <div class="d-flex align-items-start"><div><div class="text-secondary">Nomor dokumen</div><div class="h1 text-break user-select-all">{{ $document->number }}</div></div><div class="ms-auto">@if($document->voided_at)<span class="badge bg-danger-lt">Void</span>@else<span class="badge bg-success-lt">Terbit</span>@endif</div></div>
+            <dl class="row mt-4 mb-0"><dt class="col-sm-3">Tipe</dt><dd class="col-sm-9">{{ $document->documentType->name }} ({{ $document->documentType->code }})</dd><dt class="col-sm-3">Judul</dt><dd class="col-sm-9">{{ $document->title }}</dd><dt class="col-sm-3">Peruntukan</dt><dd class="col-sm-9">{{ $document->purpose }}</dd><dt class="col-sm-3">Periode / sequence</dt><dd class="col-sm-9">{{ $document->period_year }} / {{ $document->sequence_value }}</dd><dt class="col-sm-3">Diterbitkan</dt><dd class="col-sm-9">{{ $document->issued_at->timezone(config('office.business_timezone'))->format('d M Y H:i') }} WIB oleh {{ $document->issuer->name }}</dd>@if($document->voided_at)<dt class="col-sm-3">Void</dt><dd class="col-sm-9">{{ $document->voided_at->timezone(config('office.business_timezone'))->format('d M Y H:i') }} WIB oleh {{ $document->voider->name }}<div class="text-danger">{{ $document->void_reason }}</div></dd>@endif</dl>
+        </div></div></div>
+        <div class="col-lg-4">@can('void', $document) @if(!$document->voided_at)<form method="POST" action="{{ route('documents.void', $document) }}" class="card" onsubmit="return confirm('Void nomor ini? Nomor tetap tersimpan dan tidak dapat digunakan ulang.')">@csrf<div class="card-header"><h2 class="card-title">Void nomor</h2></div><div class="card-body"><label class="form-label" for="reason">Alasan</label><textarea id="reason" name="reason" class="form-control" minlength="5" maxlength="2000" rows="4" required></textarea><div class="form-hint">Void tidak menghapus atau mengembalikan sequence.</div></div><div class="card-footer text-end"><button class="btn btn-danger" type="submit">Void nomor</button></div></form>@endif @endcan</div>
+        <div class="col-12"><div class="card"><div class="card-header"><h2 class="card-title">Audit trail</h2></div><div class="table-responsive"><table class="table card-table table-vcenter"><thead><tr><th>Waktu</th><th>Aktor</th><th>Aksi</th><th>Perubahan</th></tr></thead><tbody>@forelse($audits as $audit)<tr><td>{{ $audit->occurred_at->timezone(config('office.business_timezone'))->format('d M Y H:i') }}</td><td>{{ $audit->actor?->name ?? 'Sistem' }}</td><td><code>{{ $audit->action }}</code></td><td><details><summary>Lihat snapshot</summary><pre class="mt-2 mb-0 text-wrap">{{ json_encode(['before' => $audit->before, 'after' => $audit->after], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre></details></td></tr>@empty<tr><td colspan="4" class="text-center text-secondary py-4">Belum ada audit untuk dokumen ini.</td></tr>@endforelse</tbody></table></div></div></div>
+    </div></div></div>
+@endsection
