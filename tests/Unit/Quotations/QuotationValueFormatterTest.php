@@ -26,7 +26,7 @@ class QuotationValueFormatterTest extends TestCase
             'date' => ['2026-07-18', 'date', '18 Juli 2026'],
             'boolean true' => ['true', 'boolean', 'Ya'],
             'boolean false' => ['0', 'boolean', 'Tidak'],
-            'empty' => [null, 'text', '—'],
+            'empty' => [null, 'text', '-'],
         ];
     }
 }

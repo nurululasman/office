@@ -7,14 +7,17 @@ use App\Http\Requests\QuotationDraftRequest;
 use App\Models\DocumentTemplate;
 use App\Models\Quotation;
 use App\Services\Audit\AuditLogger;
+use App\Services\Quotations\QuotationTableLayout;
 use App\Services\Quotations\QuotationValueFormatter;
 use App\Services\Quotations\QuotationWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class QuotationController extends Controller
 {
@@ -67,7 +70,7 @@ class QuotationController extends Controller
         Gate::authorize('view', $quotation);
 
         return view('quotations.show', [
-            'quotation' => $quotation->load(['creator', 'document.voider', 'items.values', 'terms', 'submitter', 'approver', 'rejecter', 'completer']),
+            'quotation' => $quotation->load(['creator', 'document.voider', 'items.values', 'terms', 'submitter', 'approver', 'rejecter', 'completer', 'generatedFiles']),
             'audits' => $quotation->audits()->with('actor')->oldest('occurred_at')->get(),
         ]);
     }
@@ -88,14 +91,28 @@ class QuotationController extends Controller
         ]);
     }
 
-    public function preview(Quotation $quotation, QuotationValueFormatter $formatter): View
+    public function preview(Quotation $quotation, QuotationValueFormatter $formatter, QuotationTableLayout $tableLayout): View
     {
         Gate::authorize('preview', $quotation);
 
-        return view('quotations.preview', [
+        return view('quotations.document', [
             'quotation' => $quotation->load(['creator', 'items.values', 'terms']),
             'formatter' => $formatter,
+            'tableLayout' => $tableLayout->build($quotation->item_schema),
+            'isDraft' => true,
+            'browserPreview' => true,
+            'logoSource' => asset('static/jblu.png'),
         ]);
+    }
+
+    public function previewPdf(Quotation $quotation): StreamedResponse
+    {
+        return $this->pdfResponse($quotation, 'inline');
+    }
+
+    public function downloadPdf(Quotation $quotation): StreamedResponse
+    {
+        return $this->pdfResponse($quotation, 'attachment');
     }
 
     public function update(QuotationDraftRequest $request, Quotation $quotation, AuditLogger $audit): RedirectResponse
@@ -205,5 +222,39 @@ class QuotationController extends Controller
         }
 
         return redirect()->route('quotations.show', $result ?? $quotation)->with('status', 'Workflow quotation berhasil diproses.');
+    }
+
+    private function pdfResponse(Quotation $quotation, string $disposition): StreamedResponse
+    {
+        Gate::authorize('viewPdf', $quotation);
+        $file = $quotation->generatedFiles()->where('kind', 'quotation_pdf')->first();
+        if (! $file) {
+            abort(404, 'PDF quotation belum tersedia.');
+        }
+        if ($file->status !== 'ready') {
+            abort($file->status === 'failed' ? 503 : 409, $file->status === 'failed'
+                ? 'Pembuatan PDF quotation gagal. Hubungi administrator untuk retry.'
+                : 'PDF quotation sedang dibuat. Coba kembali beberapa saat lagi.');
+        }
+
+        $disk = Storage::disk($file->disk);
+        if (! $disk->exists($file->path)) {
+            abort(404, 'File PDF quotation tidak ditemukan.');
+        }
+
+        return $disk->response($file->path, $this->pdfFilename($quotation), [
+            'Content-Type' => $file->mime_type,
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+            'ETag' => '"'.$file->sha256.'"',
+        ], $disposition);
+    }
+
+    private function pdfFilename(Quotation $quotation): string
+    {
+        $number = preg_replace('/[^A-Za-z0-9._-]+/', '-', (string) $quotation->document?->number);
+        $number = trim((string) $number, '-.');
+
+        return 'Quotation-'.($number !== '' ? $number : $quotation->getKey()).'.pdf';
     }
 }

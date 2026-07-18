@@ -9,7 +9,7 @@ final class QuotationValueFormatter
     public function format(?string $value, string $valueType, string $currency = 'IDR'): string
     {
         if ($value === null || $value === '') {
-            return '—';
+            return '-';
         }
 
         return match ($valueType) {

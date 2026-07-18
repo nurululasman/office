@@ -28,4 +28,11 @@ class FoundationConfigurationTest extends TestCase
             config("filesystems.disks.{$disk}.root"),
         );
     }
+
+    public function test_pdf_jobs_use_database_connection_and_dedicated_queue(): void
+    {
+        $this->assertSame('database', config('office.queues.pdf_connection'));
+        $this->assertSame('pdf', config('office.queues.pdf'));
+        $this->assertTrue(config('queue.connections.database.after_commit'));
+    }
 }

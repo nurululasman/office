@@ -11,11 +11,17 @@ class GeneratedFile extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['owner_type', 'owner_id', 'template_id', 'kind', 'disk', 'path', 'mime_type', 'size', 'sha256', 'generated_at', 'generated_by'];
+    protected $fillable = [
+        'owner_type', 'owner_id', 'template_id', 'kind', 'status', 'attempts', 'disk', 'path',
+        'mime_type', 'size', 'sha256', 'last_error', 'queued_at', 'started_at', 'generated_at', 'generated_by',
+    ];
 
     protected function casts(): array
     {
-        return ['size' => 'integer', 'generated_at' => 'immutable_datetime'];
+        return [
+            'size' => 'integer', 'attempts' => 'integer', 'queued_at' => 'immutable_datetime',
+            'started_at' => 'immutable_datetime', 'generated_at' => 'immutable_datetime',
+        ];
     }
 
     public function owner(): MorphTo

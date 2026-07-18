@@ -18,6 +18,7 @@ final class QuotationWorkflow
         private readonly DocumentNumberIssuer $issuer,
         private readonly AuditLogger $audit,
         private readonly DocumentVoidService $documentVoid,
+        private readonly QuotationPdfDispatcher $pdfDispatcher,
     ) {}
 
     public function completeDirect(Quotation $quotation, User $actor, Request $request): Quotation
@@ -44,6 +45,7 @@ final class QuotationWorkflow
             ]);
             $this->audit->record('quotation.approval_bypassed', $actor, $locked, before: $before, after: $locked->toArray(), context: ['reason' => 'approval_mode_direct'], request: $request);
             $this->audit->record('quotation.completed', $actor, $locked, before: $before, after: $locked->toArray(), context: ['document_number' => $document->number, 'path' => 'direct'], request: $request);
+            $this->pdfDispatcher->dispatch($locked, $actor);
 
             return $locked->refresh();
         }, 3);
@@ -90,6 +92,7 @@ final class QuotationWorkflow
             ]);
             $this->audit->record('quotation.approved', $actor, $locked, before: $before, after: $locked->toArray(), request: $request);
             $this->audit->record('quotation.completed', $actor, $locked, before: $before, after: $locked->toArray(), context: ['document_number' => $document->number, 'path' => 'maker_checker'], request: $request);
+            $this->pdfDispatcher->dispatch($locked, $actor);
 
             return $locked->refresh();
         }, 3);

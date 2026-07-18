@@ -136,13 +136,32 @@ class QuotationDraftManagementTest extends TestCase
         $this->as($maker)->get(route('quotations.preview', $quotation))
             ->assertOk()
             ->assertSee('data-testid="quotation-preview"', false)
+            ->assertSee('class="letterhead"', false)
+            ->assertSee('class="company-logo"', false)
+            ->assertSee('/static/jblu.png', false)
+            ->assertSee('@page { size: A4 portrait; margin: 17mm 18mm 16mm; }', false)
+            ->assertSee('object-fit: contain', false)
+            ->assertSee('display: table-header-group', false)
+            ->assertSee('break-inside: avoid', false)
             ->assertSee('DRAFT')
-            ->assertSee('Preview draft — bukan dokumen resmi')
+            ->assertSee('Preview draft - bukan dokumen resmi')
             ->assertSee('18 Juli 2026')
             ->assertSee('Rp 125.001')
             ->assertSee('Storage / day');
 
         $this->as($basic)->get(route('quotations.preview', $quotation))->assertForbidden();
+    }
+
+    public function test_official_jblu_logo_has_verified_dimensions_ratio_and_hash(): void
+    {
+        $path = public_path('static/jblu.png');
+        $size = getimagesize($path);
+
+        $this->assertFileExists($path);
+        $this->assertSame(896, $size[0]);
+        $this->assertSame(755, $size[1]);
+        $this->assertEqualsWithDelta(1.187, $size[0] / $size[1], 0.001);
+        $this->assertSame('CF7F4C45F4D23C345E35D17A02758D92CD644E2FFE222F23EFE60F025A14DBCC', strtoupper(hash_file('sha256', $path)));
     }
 
     public function test_stale_edit_does_not_overwrite_a_newer_draft(): void

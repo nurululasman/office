@@ -8,8 +8,14 @@ return [
         'disk' => env('OFFICE_DOCUMENT_DISK', 'documents'),
     ],
 
+    'pdf' => [
+        'chrome_binary' => env('OFFICE_CHROME_BINARY'),
+        'timeout_seconds' => (int) env('OFFICE_PDF_TIMEOUT', 120),
+    ],
+
     'queues' => [
         'default' => env('DB_QUEUE', 'default'),
+        'pdf_connection' => env('PDF_QUEUE_CONNECTION', 'database'),
         'pdf' => env('PDF_QUEUE', 'pdf'),
     ],
 ];

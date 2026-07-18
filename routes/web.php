@@ -33,6 +33,8 @@ Route::middleware(['auth', 'sso.session'])->group(function () {
     Route::patch('/document-types/{document_type}/toggle', [DocumentTypeController::class, 'toggle'])->name('document-types.toggle');
     Route::resource('document-types', DocumentTypeController::class)->except('show');
     Route::get('/quotations/{quotation}/preview', [QuotationController::class, 'preview'])->name('quotations.preview');
+    Route::get('/quotations/{quotation}/pdf/preview', [QuotationController::class, 'previewPdf'])->name('quotations.pdf.preview');
+    Route::get('/quotations/{quotation}/pdf/download', [QuotationController::class, 'downloadPdf'])->name('quotations.pdf.download');
     Route::post('/quotations/{quotation}/complete', [QuotationController::class, 'complete'])->name('quotations.complete');
     Route::post('/quotations/{quotation}/submit', [QuotationController::class, 'submit'])->name('quotations.submit');
     Route::post('/quotations/{quotation}/approve', [QuotationController::class, 'approve'])->name('quotations.approve');

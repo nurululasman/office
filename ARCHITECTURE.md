@@ -482,11 +482,11 @@ Status: `[ ]` belum selesai, `[~]` sedang dikerjakan, `[x]` selesai. Kerjakan be
 
 ### Fase 4 - PDF quotation sesuai contoh
 
-- [ ] `OFF-0401` Gunakan asset `public/static/jblu.png` dan buat template HTML/CSS A4 berdasarkan lampiran; verifikasi ukuran, ketajaman, rasio, dan hasil cetaknya.
-- [ ] `OFF-0402` Implementasi tabel dinamis dari definisi key-value, header bertingkat opsional, multi-page behavior, terms, penutup, dan blok tanda tangan.
-- [ ] `OFF-0403` Implementasi Chrome PDF renderer, database queue `pdf`, after-commit dispatch, retry, status, private storage, metadata, dan SHA-256.
-- [ ] `OFF-0404` Endpoint preview/download dengan policy dan nama file stabil.
-- [ ] `OFF-0405` Visual QA terhadap contoh untuk data pendek/panjang, karakter khusus, item banyak, dan nilai kosong.
+- [x] `OFF-0401` Gunakan asset `public/static/jblu.png` dan buat template HTML/CSS A4 berdasarkan lampiran; verifikasi ukuran, ketajaman, rasio, dan hasil cetaknya. Bukti implementasi dan verifikasi: [`OFF-0401`](docs/implementation/OFF-0401-A4-QUOTATION-TEMPLATE.md).
+- [x] `OFF-0402` Implementasi tabel dinamis dari definisi key-value, header bertingkat opsional, multi-page behavior, terms, penutup, dan blok tanda tangan. Bukti implementasi dan verifikasi: [`OFF-0402`](docs/implementation/OFF-0402-DYNAMIC-TABLE-AND-MULTIPAGE.md).
+- [x] `OFF-0403` Implementasi Chrome PDF renderer, database queue `pdf`, after-commit dispatch, retry, status, private storage, metadata, dan SHA-256. Bukti implementasi dan verifikasi: [`OFF-0403`](docs/implementation/OFF-0403-CHROME-PDF-QUEUE.md).
+- [x] `OFF-0404` Endpoint preview/download dengan policy dan nama file stabil. Bukti implementasi dan verifikasi: [`OFF-0404`](docs/implementation/OFF-0404-PDF-PREVIEW-DOWNLOAD.md).
+- [x] `OFF-0405` Visual QA terhadap contoh untuk data pendek/panjang, karakter khusus, item banyak, dan nilai kosong. Bukti implementasi dan verifikasi: [`OFF-0405`](docs/implementation/OFF-0405-VISUAL-QA-MATRIX.md).
 
 **Acceptance criteria:** PDF final dapat dibuka dan dicetak A4 tanpa clipping/overlap; kolom PDF mengikuti definisi template dan dapat memakai key general; elemen visual contoh terwakili; PDF berasal dari snapshot complete; retry tidak membuat nomor atau file final ganda.
 

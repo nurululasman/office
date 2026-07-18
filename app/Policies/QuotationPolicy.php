@@ -37,6 +37,11 @@ class QuotationPolicy
         return $user->hasPermissionTo('quotations.pdf.read');
     }
 
+    public function viewPdf(User $user, Quotation $quotation): bool
+    {
+        return $user->hasPermissionTo('quotations.pdf.read');
+    }
+
     public function completeDirect(User $user, Quotation $quotation): bool
     {
         return $user->hasPermissionTo('quotations.complete-direct')
