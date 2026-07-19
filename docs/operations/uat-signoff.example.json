@@ -1,0 +1,10 @@
+{
+  "release": "replace-with-release-id",
+  "completed_at": "2026-07-19T00:00:00Z",
+  "open_critical": 0,
+  "open_high": 0,
+  "signoff": {
+    "process_owner": {"identity": "replace-with-identity", "decision": "APPROVED"},
+    "operator": {"identity": "replace-with-identity", "decision": "APPROVED"}
+  }
+}

@@ -492,7 +492,7 @@ Status: `[ ]` belum selesai, `[~]` sedang dikerjakan, `[x]` selesai. Kerjakan be
 
 ### Fase 5 - Contract
 
-- [ ] `OFF-0501` Peroleh contoh kontrak resmi lalu finalisasi struktur pasal, template, signature blocks, placeholder materai, dan aturan status berdasarkan persetujuan bisnis.
+- [ ] `OFF-0501` Peroleh contoh kontrak resmi lalu finalisasi struktur pasal, template, signature blocks, placeholder materai, dan aturan status berdasarkan persetujuan bisnis. **Blocked:** audit workspace 18 Juli 2026 tidak menemukan contoh kontrak; `logistics park.docx` hanya berisi logo JBLU. Bukti gate dan checklist akuisisi: [`OFF-0501`](docs/implementation/OFF-0501-CONTRACT-SOURCE-GATE.md).
 - [ ] `OFF-0502` Migration/model kontrak dan item terstruktur bila diperlukan.
 - [ ] `OFF-0503` Buat kontrak standalone dan dari quotation complete dengan snapshot data.
 - [ ] `OFF-0504` Editor draft/pasal dengan sanitasi, validasi tanggal, preview, dan policy.
@@ -504,12 +504,12 @@ Status: `[ ]` belum selesai, `[~]` sedang dikerjakan, `[x]` selesai. Kerjakan be
 
 ### Fase 6 - Hardening, UAT, dan rilis
 
-- [ ] `OFF-0601` End-to-end regression dan load/concurrency test pada staging menyerupai production.
-- [ ] `OFF-0602` Security review: OAuth/PKCE, token handling, policy/IDOR, CSRF, XSS, rate limit, secret, dan file access.
-- [ ] `OFF-0603` Implementasi backup PostgreSQL base+WAL/PITR, backup private files, restore drill, migration rollback plan, monitoring, alert, dan queue operations sesuai `OFF-0006`.
-- [ ] `OFF-0604` UAT dengan skenario nyata dan sign-off pemilik proses.
-- [ ] `OFF-0605` Data awal tipe/pola nomor, role, template, dan cutover sequence legacy diverifikasi dua pihak.
-- [ ] `OFF-0606` Production deployment, smoke test, observasi, dan rollback readiness.
+- [x] `OFF-0601` End-to-end regression dan load/concurrency test pada staging menyerupai production. Scope Contract dikecualikan karena Fase 5 ditunda oleh pemilik proses. Bukti implementasi dan verifikasi: [`OFF-0601`](docs/implementation/OFF-0601-RELEASE-REGRESSION-AND-CONCURRENCY.md).
+- [x] `OFF-0602` Security review: OAuth/PKCE, token handling, policy/IDOR, CSRF, XSS, rate limit, secret, dan file access. Tidak ada temuan kritis/tinggi; hardening rate limit, header keamanan, dan gate konfigurasi produksi telah diterapkan. Scope Contract dikecualikan karena Fase 5 ditunda. Bukti implementasi dan verifikasi: [`OFF-0602`](docs/implementation/OFF-0602-SECURITY-REVIEW.md).
+- [ ] `OFF-0603` Implementasi backup PostgreSQL base+WAL/PITR, backup private files, restore drill, migration rollback plan, monitoring, alert, dan queue operations sesuai `OFF-0006`. Gate fail-closed, format evidence, scheduler, monitoring, queue operations, dan runbook telah diimplementasikan serta diuji; checklist tetap terbuka sampai backup off-host dan restore drill nyata menerbitkan evidence yang lulus `office:backup:check --production`. Bukti implementasi: [`OFF-0603`](docs/implementation/OFF-0603-BACKUP-RESTORE-AND-OPERATIONS.md).
+- [ ] `OFF-0604` UAT dengan skenario nyata dan sign-off pemilik proses. Paket 15 skenario, execution record, severity/exit criteria, dan automated preflight telah disiapkan; checklist tetap terbuka sampai UAT pada environment staging/UAT dijalankan dan pemilik proses menandatangani sign-off. Dokumen: [`UAT plan`](docs/uat/OFF-0604-UAT-PLAN.md) dan [`execution record`](docs/uat/OFF-0604-UAT-EXECUTION.md).
+- [ ] `OFF-0605` Data awal tipe/pola nomor, role, template, dan cutover sequence legacy diverifikasi dua pihak. Command manifest-driven, dry-run, seed idempotent, perlindungan sequence monotonic, dan runbook freeze/cutover telah diimplementasikan; checklist tetap terbuka sampai register terbaru dan identitas legal direkonsiliasi serta disetujui pemilik proses dan administrator. Bukti implementasi: [`OFF-0605`](docs/implementation/OFF-0605-INITIAL-DATA-AND-CUTOVER.md).
+- [ ] `OFF-0606` Production deployment, smoke test, observasi, dan rollback readiness. Fail-closed release gate, read-only HTTPS smoke, deployment/observation/rollback runbook, dan runner telah diimplementasikan; checklist tetap terbuka sampai blocker OFF-0603/0604/0605 ditutup dan deployment production berhasil diobservasi. Bukti implementasi: [`OFF-0606`](docs/implementation/OFF-0606-PRODUCTION-DEPLOYMENT.md).
 
 **Acceptance criteria:** seluruh temuan kritis/tinggi ditutup; restore terbukti; nomor awal production disetujui; UAT sign-off; runbook dan rollback dapat dijalankan operator.
 

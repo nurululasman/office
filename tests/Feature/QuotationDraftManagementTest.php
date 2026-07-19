@@ -152,6 +152,25 @@ class QuotationDraftManagementTest extends TestCase
         $this->as($basic)->get(route('quotations.preview', $quotation))->assertForbidden();
     }
 
+    public function test_quotation_output_escapes_untrusted_html(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $template = $this->template();
+        $payload = $this->payload($template);
+        $payload['subject'] = '<script>alert("xss")</script>';
+        $payload['customer_name'] = '<img src=x onerror=alert(1)>';
+
+        $this->as($maker)->post(route('quotations.store'), $payload)->assertSessionHasNoErrors();
+        $quotation = Quotation::query()->sole();
+
+        $this->as($maker)->get(route('quotations.preview', $quotation))
+            ->assertOk()
+            ->assertSee('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;', false)
+            ->assertSee('&lt;img src=x onerror=alert(1)&gt;', false)
+            ->assertDontSee('<script>alert("xss")</script>', false)
+            ->assertDontSee('<img src=x onerror=alert(1)>', false);
+    }
+
     public function test_official_jblu_logo_has_verified_dimensions_ratio_and_hash(): void
     {
         $path = public_path('static/jblu.png');

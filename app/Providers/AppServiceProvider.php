@@ -16,7 +16,10 @@ use App\Policies\QuotationPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use App\Services\Identity\JbluSsoIdentityProvider;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -34,6 +37,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('sso-login', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
+        RateLimiter::for('sso-callback', fn (Request $request): Limit => Limit::perMinute(20)->by($request->ip()));
+        RateLimiter::for('office-preview', fn (Request $request): Limit => Limit::perMinute(30)->by((string) ($request->user()?->getKey() ?? $request->ip())));
+        RateLimiter::for('office-mutation', fn (Request $request): Limit => Limit::perMinute(30)->by((string) ($request->user()?->getKey() ?? $request->ip())));
+
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Document::class, DocumentPolicy::class);
         Gate::policy(DocumentType::class, DocumentTypePolicy::class);

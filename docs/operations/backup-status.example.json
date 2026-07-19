@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-07-19T00:00:00Z",
+  "off_host": true,
+  "encrypted": true,
+  "database": {
+    "backup_id": "base-20260718T230000Z",
+    "completed_at": "2026-07-18T23:00:00Z",
+    "wal_archived_at": "2026-07-18T23:45:00Z",
+    "checksum_verified": true
+  },
+  "private_files": {
+    "backup_id": "files-20260718T234500Z",
+    "completed_at": "2026-07-18T23:45:00Z",
+    "manifest_sha256": "replace-with-real-sha256",
+    "manifest_verified": true
+  }
+}

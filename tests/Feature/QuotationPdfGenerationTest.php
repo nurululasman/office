@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\Quotations\QuotationPdfRenderer;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
@@ -99,21 +100,26 @@ class QuotationPdfGenerationTest extends TestCase
             $this->markTestSkipped('Set OFFICE_RUN_PDF_RENDERER_TESTS=true untuk menjalankan gate Chrome PDF.');
         }
 
+        $proofRoot = storage_path('framework/testing/disks/pdf-proof');
         config(['filesystems.disks.pdf-proof' => [
-            'driver' => 'local', 'root' => base_path('output/pdf'), 'serve' => false, 'throw' => true,
+            'driver' => 'local', 'root' => $proofRoot, 'serve' => false, 'throw' => true,
         ]]);
         $file = $this->completeFile();
-        $file->update(['disk' => 'pdf-proof', 'path' => 'OFF-0403-renderer-proof.pdf']);
+        $file->update(['disk' => 'pdf-proof', 'path' => 'quotation.pdf']);
 
-        app(QuotationPdfRenderer::class)->render($file->refresh());
+        try {
+            app(QuotationPdfRenderer::class)->render($file->refresh());
 
-        $contents = Storage::disk('pdf-proof')->get($file->path);
-        $file->refresh();
-        $this->assertStringStartsWith('%PDF-', $contents);
-        $this->assertSame('ready', $file->status);
-        $this->assertSame(strlen($contents), $file->size);
-        $this->assertSame(hash('sha256', $contents), $file->sha256);
-        $this->assertNotNull($file->generated_at);
+            $contents = Storage::disk('pdf-proof')->get($file->path);
+            $file->refresh();
+            $this->assertStringStartsWith('%PDF-', $contents);
+            $this->assertSame('ready', $file->status);
+            $this->assertSame(strlen($contents), $file->size);
+            $this->assertSame(hash('sha256', $contents), $file->sha256);
+            $this->assertNotNull($file->generated_at);
+        } finally {
+            File::deleteDirectory($proofRoot);
+        }
     }
 
     public function test_authorized_user_can_preview_and_download_ready_private_pdf_with_stable_name(): void

@@ -1,0 +1,48 @@
+{
+  "manifest_version": 1,
+  "source_reference": "replace-with-controlled-register-export-id-and-sha256",
+  "approvals": {
+    "process_owner": "replace-with-process-owner-identity",
+    "administrator": "replace-with-administrator-identity"
+  },
+  "company_profile": {
+    "company_code": "JBLU",
+    "legal_name": "replace-with-verified-legal-name",
+    "display_name": "JBLU",
+    "address_lines": ["replace-with-verified-address"],
+    "city": "replace-with-verified-city",
+    "postal_code": "replace-with-verified-postal-code",
+    "country": "ID",
+    "logo_path": "static/jblu.png",
+    "logo_sha256": "CF7F4C45F4D23C345E35D17A02758D92CD644E2FFE222F23EFE60F025A14DBCC",
+    "primary_color": "#005596"
+  },
+  "document_types": [
+    {
+      "code": "QUOTATION",
+      "name": "Quotation",
+      "number_pattern": "QT-JBLU-{YYYY}{MM}{SEQ:4}",
+      "approval_mode": "direct"
+    }
+  ],
+  "templates": [
+    {
+      "type": "quotation",
+      "version": 1,
+      "name": "JBLU Quotation",
+      "settings": {
+        "columns": [
+          {"key": "description", "label": "Description", "value_type": "text", "required": true},
+          {"key": "unit_price", "label": "Unit Price", "value_type": "currency", "required": true}
+        ]
+      }
+    }
+  ],
+  "sequences": [
+    {
+      "document_type_code": "QUOTATION",
+      "period_year": 2026,
+      "last_value": 0
+    }
+  ]
+}

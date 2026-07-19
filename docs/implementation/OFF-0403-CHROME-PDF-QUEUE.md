@@ -56,7 +56,7 @@ Hasil 18 Juli 2026:
 - gate Chrome: **1 passed, 5 assertions**;
 - output: `output/pdf/OFF-0403-renderer-proof.pdf`;
 - 1 halaman A4 `594.96 x 841.92 pt`;
-- SHA-256: `E3206A7D0757A6D5A58A7145C710CFBB6587DEA26B3D150B5F71BDE9F07A62CF`;
+- SHA-256 artefak bukti terbaru: `1CBF832B1B1109EF741D98E5312E908C482CCBE0A648AC8E162502E54411F83E`;
 - pemeriksaan PNG menunjukkan nomor resmi, logo, tabel, penutup, tanda tangan, dan footer tampil tanpa watermark draft, clipping, atau overlap.
 
 ## Verifikasi otomatis

@@ -1,0 +1,14 @@
+{
+  "drill_id": "restore-2026-Q3-001",
+  "completed_at": "2026-07-19T00:00:00Z",
+  "status": "passed",
+  "backup_id": "base-20260718T230000Z",
+  "recovery_target": "2026-07-18T23:30:00Z",
+  "actual_rpo_minutes": 30,
+  "actual_rto_minutes": 120,
+  "database_integrity": "passed",
+  "private_file_manifest": "passed",
+  "sample_pdf_download": "passed",
+  "smoke_test": "passed",
+  "operator": "replace-with-operator-id"
+}

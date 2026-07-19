@@ -8,6 +8,7 @@ use App\Models\Document;
 use App\Models\DocumentSequence;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentType;
+use App\Models\GeneratedFile;
 use App\Models\Quotation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -109,7 +110,15 @@ class PostgresQuotationConcurrencyTest extends TestCase
 
         $documentIds = Document::query()->where('source_id', $this->quotation->getKey())->pluck('id');
         $auditSubjectIds = $documentIds->concat([$this->quotation->getKey()]);
+        $generatedFileIds = GeneratedFile::query()
+            ->where('owner_type', $this->quotation->getMorphClass())
+            ->where('owner_id', $this->quotation->getKey())
+            ->pluck('id');
         AuditLog::query()->whereIn('subject_id', $auditSubjectIds)->delete();
+        foreach ($generatedFileIds as $generatedFileId) {
+            DB::table('jobs')->where('payload', 'like', "%{$generatedFileId}%")->delete();
+        }
+        GeneratedFile::query()->where('owner_type', $this->quotation->getMorphClass())->where('owner_id', $this->quotation->getKey())->delete();
         Quotation::query()->whereKey($this->quotation->getKey())->delete();
         Document::query()->whereIn('id', $documentIds)->delete();
         DocumentSequence::query()->where('document_type_id', $this->type->getKey())->delete();
