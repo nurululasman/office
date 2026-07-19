@@ -165,4 +165,26 @@ class SsoAuthenticationFlowTest extends TestCase
     {
         $this->get('/office')->assertRedirect(route('login'));
     }
+
+    public function test_welcome_redirects_guest_to_login(): void
+    {
+        $this->get(route('welcome'))->assertRedirect(route('login'));
+    }
+
+    public function test_welcome_redirects_authenticated_user_to_dashboard(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession([
+                'office.sso.tokens' => [
+                    'access_token' => 'encrypted',
+                    'refresh_token' => null,
+                    'expires_at' => time() + 3600,
+                    'authenticated_at' => time(),
+                ],
+            ])
+            ->get(route('welcome'))
+            ->assertRedirect(route('office.home'));
+    }
 }

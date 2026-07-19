@@ -12,7 +12,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route(auth()->check() ? 'office.home' : 'login');
 })->name('welcome');
 
 Route::get('/health/live', [HealthController::class, 'live'])->name('health.live');
