@@ -130,10 +130,18 @@ class QuotationDraftManagementTest extends TestCase
         $maker = $this->userWithRole('quotation-maker');
         $basic = $this->userWithRole('office-user');
         $template = $this->template();
+        $template->companyProfile->update([
+            'address_lines' => ['Alamat lengkap yang ditampilkan'],
+            'city' => 'Kota duplikat',
+            'postal_code' => '99999',
+            'country' => 'ZZ',
+        ]);
         $this->as($maker)->post(route('quotations.store'), $this->payload($template));
         $quotation = Quotation::query()->sole();
 
-        $this->as($maker)->get(route('quotations.preview', $quotation))
+        $preview = $this->as($maker)->get(route('quotations.preview', $quotation));
+
+        $preview
             ->assertOk()
             ->assertSee('data-testid="quotation-preview"', false)
             ->assertSee('class="letterhead"', false)
@@ -145,9 +153,15 @@ class QuotationDraftManagementTest extends TestCase
             ->assertSee('break-inside: avoid', false)
             ->assertSee('DRAFT')
             ->assertSee('Preview draft - bukan dokumen resmi')
+            ->assertSee('Alamat lengkap yang ditampilkan')
+            ->assertDontSee('Kota duplikat')
+            ->assertDontSee('99999')
+            ->assertDontSee('ZZ')
             ->assertSee('18 Juli 2026')
             ->assertSee('Rp 125.001')
-            ->assertSee('Storage / day');
+            ->assertSee('Storage / day')
+            ->assertDontSee('Name &amp; signature', false);
+        $this->assertSame(2, substr_count((string) $preview->getContent(), 'Customer A'));
 
         $this->as($basic)->get(route('quotations.preview', $quotation))->assertForbidden();
     }
