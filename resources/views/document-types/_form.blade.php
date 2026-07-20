@@ -13,6 +13,14 @@
         <div class="col-md-5"><label class="form-label" for="name">Nama</label><input id="name" name="name" class="form-control" maxlength="150" required value="{{ old('name', $documentType->name ?? '') }}" placeholder="Quotation"></div>
         <div class="col-md-3"><label class="form-label" for="approval_mode">Mode approval</label><select id="approval_mode" name="approval_mode" class="form-select"><option value="direct" @selected(old('approval_mode', $documentType->approval_mode ?? 'direct') === 'direct')>Direct</option><option value="maker_checker" @selected(old('approval_mode', $documentType->approval_mode ?? '') === 'maker_checker')>Maker-checker</option></select></div>
     </div>
+    <div class="row g-3 mt-1">
+        <div class="col-md-4">
+            <label class="form-label" for="latest_sequence">Latest sequence {{ $sequencePeriodYear ?? now(config('office.business_timezone'))->year }}</label>
+            <input id="latest_sequence" name="latest_sequence" type="number" min="0" step="1" class="form-control" required value="{{ old('latest_sequence', $latestSequence ?? 0) }}">
+            <div class="form-hint">Request nomor berikutnya memakai nilai ini + 1. Nilai yang sudah tersimpan hanya dapat dinaikkan.</div>
+            @error('latest_sequence')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+        </div>
+    </div>
 
     <div class="mt-4"><div class="d-flex align-items-center mb-2"><label class="form-label mb-0">Segment builder</label><div class="ms-auto btn-list"><button type="button" class="btn btn-sm" @click="add('literal')">+ Literal</button><button type="button" class="btn btn-sm" @click="add('token')">+ Token tanggal</button><button type="button" class="btn btn-sm" @click="add('sequence')">+ Sequence</button></div></div>
         <div class="list-group">

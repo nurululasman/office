@@ -24,6 +24,7 @@ abstract class DocumentTypeRequest extends FormRequest
             'code' => ['required', 'string', 'max:50', 'regex:/\A[A-Z][A-Z0-9_-]*\z/', Rule::unique('document_types')->ignore($documentType)],
             'name' => ['required', 'string', 'max:150'],
             'approval_mode' => ['required', Rule::in(['direct', 'maker_checker'])],
+            'latest_sequence' => ['required', 'integer', 'min:0'],
             'segments' => ['required', 'array', 'min:1', 'max:30'],
             'is_active' => ['sometimes', 'boolean'],
         ];

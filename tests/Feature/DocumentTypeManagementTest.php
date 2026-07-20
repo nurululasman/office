@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\DocumentSequence;
 use App\Models\DocumentType;
 use App\Models\User;
+use App\Services\Documents\DocumentNumberIssuer;
 use App\Services\Documents\DocumentNumberPattern;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RolePermissionSeeder;
@@ -30,6 +31,7 @@ class DocumentTypeManagementTest extends TestCase
             'code' => 'quotation',
             'name' => 'Quotation',
             'approval_mode' => 'maker_checker',
+            'latest_sequence' => 0,
             'segments' => [
                 ['type' => 'literal', 'value' => 'QT-JBLU-'],
                 ['type' => 'token', 'value' => 'YYYY'],
@@ -49,6 +51,7 @@ class DocumentTypeManagementTest extends TestCase
             'code' => 'QUOTATION',
             'name' => 'Quotation JBLU',
             'approval_mode' => 'direct',
+            'latest_sequence' => 0,
             'segments' => [
                 ['type' => 'sequence', 'width' => 4],
                 ['type' => 'literal', 'value' => '/JBLU/'],
@@ -66,7 +69,7 @@ class DocumentTypeManagementTest extends TestCase
     public function test_pattern_requires_one_valid_sequence_and_rejects_unsafe_literals(): void
     {
         $admin = $this->userWithRole('document-admin');
-        $base = ['code' => 'GENERAL', 'name' => 'General', 'approval_mode' => 'direct'];
+        $base = ['code' => 'GENERAL', 'name' => 'General', 'approval_mode' => 'direct', 'latest_sequence' => 0];
 
         $this->actingAs($admin)->withSession($this->validSsoSession())->post('/document-types', $base + [
             'segments' => [['type' => 'literal', 'value' => 'DOC-']],
@@ -100,6 +103,60 @@ class DocumentTypeManagementTest extends TestCase
             'preview' => '0001/JBLU/VII/2026',
         ]);
 
+        CarbonImmutable::setTestNow();
+    }
+
+    public function test_admin_can_set_latest_sequence_and_next_issue_continues_from_it(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-20 03:00:00 UTC');
+        $admin = $this->userWithRole('document-admin');
+
+        $this->actingAs($admin)->withSession($this->validSsoSession())->post('/document-types', [
+            'code' => 'GENERAL',
+            'name' => 'General',
+            'approval_mode' => 'direct',
+            'latest_sequence' => 125,
+            'segments' => [
+                ['type' => 'literal', 'value' => 'DOC-'],
+                ['type' => 'sequence', 'width' => 4],
+            ],
+        ])->assertRedirect('/document-types');
+
+        $type = DocumentType::query()->sole();
+        $this->assertDatabaseHas('document_sequences', [
+            'document_type_id' => $type->getKey(), 'period_year' => 2026, 'last_value' => 125,
+        ]);
+
+        $document = app(DocumentNumberIssuer::class)
+            ->issue($type, $admin, 'Surat uji', 'Internal');
+
+        $this->assertSame(126, $document->sequence_value);
+        $this->assertSame('DOC-0126', $document->number);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'document_sequence.latest_value_updated']);
+        CarbonImmutable::setTestNow();
+    }
+
+    public function test_latest_sequence_cannot_be_lowered(): void
+    {
+        CarbonImmutable::setTestNow('2026-07-20 03:00:00 UTC');
+        $admin = $this->userWithRole('document-admin');
+        $type = DocumentType::query()->create([
+            'code' => 'GENERAL', 'name' => 'General', 'number_pattern' => 'DOC-{SEQ:4}',
+        ]);
+        DocumentSequence::query()->create([
+            'document_type_id' => $type->getKey(), 'period_year' => 2026, 'last_value' => 125,
+        ]);
+
+        $this->actingAs($admin)->withSession($this->validSsoSession())->put("/document-types/{$type->getKey()}", [
+            'code' => 'GENERAL',
+            'name' => 'General changed',
+            'approval_mode' => 'direct',
+            'latest_sequence' => 124,
+            'segments' => [['type' => 'sequence', 'width' => 4]],
+        ])->assertSessionHasErrors('latest_sequence');
+
+        $this->assertSame(125, DocumentSequence::query()->sole()->last_value);
+        $this->assertSame('General', $type->refresh()->name);
         CarbonImmutable::setTestNow();
     }
 

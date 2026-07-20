@@ -7,9 +7,11 @@ use App\Http\Requests\UpdateDocumentTypeRequest;
 use App\Models\DocumentType;
 use App\Services\Audit\AuditLogger;
 use App\Services\Documents\DocumentNumberPattern;
+use App\Services\Documents\DocumentSequenceManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -35,15 +37,25 @@ class DocumentTypeController extends Controller
         StoreDocumentTypeRequest $request,
         DocumentNumberPattern $patterns,
         AuditLogger $audit,
+        DocumentSequenceManager $sequences,
     ): RedirectResponse {
-        $documentType = DocumentType::query()->create($request->documentTypeData($patterns));
-        $audit->record(
-            'document_type.created',
-            actor: $request->user(),
-            subject: $documentType,
-            after: $documentType->only($this->auditedFields()),
-            request: $request,
-        );
+        DB::transaction(function () use ($request, $patterns, $audit, $sequences): void {
+            $documentType = DocumentType::query()->create($request->documentTypeData($patterns));
+            $audit->record(
+                'document_type.created',
+                actor: $request->user(),
+                subject: $documentType,
+                after: $documentType->only($this->auditedFields()),
+                request: $request,
+            );
+            $sequences->setLatestValue(
+                $documentType,
+                $this->businessYear(),
+                $request->integer('latest_sequence'),
+                $request->user(),
+                $request,
+            );
+        });
 
         return redirect()->route('document-types.index')->with('status', 'Tipe dokumen berhasil dibuat.');
     }
@@ -55,6 +67,10 @@ class DocumentTypeController extends Controller
         return view('document-types.edit', [
             'documentType' => $documentType,
             'segments' => $patterns->fromPattern($documentType->number_pattern),
+            'latestSequence' => $documentType->sequences()
+                ->where('period_year', $this->businessYear())
+                ->value('last_value') ?? 0,
+            'sequencePeriodYear' => $this->businessYear(),
         ]);
     }
 
@@ -63,17 +79,28 @@ class DocumentTypeController extends Controller
         DocumentType $documentType,
         DocumentNumberPattern $patterns,
         AuditLogger $audit,
+        DocumentSequenceManager $sequences,
     ): RedirectResponse {
-        $before = $documentType->only($this->auditedFields());
-        $documentType->update($request->documentTypeData($patterns));
-        $audit->record(
-            'document_type.updated',
-            actor: $request->user(),
-            subject: $documentType,
-            before: $before,
-            after: $documentType->only($this->auditedFields()),
-            request: $request,
-        );
+        DB::transaction(function () use ($request, $documentType, $patterns, $audit, $sequences): void {
+            $lockedType = DocumentType::query()->lockForUpdate()->findOrFail($documentType->getKey());
+            $before = $lockedType->only($this->auditedFields());
+            $lockedType->update($request->documentTypeData($patterns));
+            $audit->record(
+                'document_type.updated',
+                actor: $request->user(),
+                subject: $lockedType,
+                before: $before,
+                after: $lockedType->only($this->auditedFields()),
+                request: $request,
+            );
+            $sequences->setLatestValue(
+                $lockedType,
+                $this->businessYear(),
+                $request->integer('latest_sequence'),
+                $request->user(),
+                $request,
+            );
+        });
 
         return redirect()->route('document-types.index')->with('status', 'Tipe dokumen berhasil diperbarui.');
     }
@@ -133,5 +160,10 @@ class DocumentTypeController extends Controller
     private function auditedFields(): array
     {
         return ['code', 'name', 'number_pattern', 'reset_period', 'approval_mode', 'is_active'];
+    }
+
+    private function businessYear(): int
+    {
+        return now(config('office.business_timezone'))->year;
     }
 }

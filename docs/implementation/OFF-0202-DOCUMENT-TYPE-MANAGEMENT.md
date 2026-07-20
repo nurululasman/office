@@ -12,6 +12,7 @@ Tanggal verifikasi: **2026-07-18**
 - Perubahan pola hanya mengubah konfigurasi tipe untuk penerbitan berikutnya dan tidak menyentuh register dokumen lama.
 - Tipe dapat diaktifkan/nonaktifkan. Hard delete hanya diizinkan sebelum tipe mempunyai document atau sequence; setelah digunakan, operator diarahkan untuk menonaktifkannya.
 - Create, update, activation, deactivation, dan deletion dicatat pada audit log dengan snapshot before/after yang relevan.
+- Form create/edit dapat menetapkan `latest sequence` untuk tahun bisnis berjalan. Penerbitan berikutnya melanjutkan dari nilai tersebut + 1. Nilai bersifat monotonic (tidak dapat diturunkan), diubah dalam transaksi yang sama dengan konfigurasi tipe, dan dicatat sebagai audit `document_sequence.latest_value_updated`.
 
 ## Bukti verifikasi
 

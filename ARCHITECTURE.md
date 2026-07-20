@@ -258,6 +258,7 @@ Audit harus mencakup login, perubahan konfigurasi nomor, penerbitan/void nomor, 
 4. Penerbitan nomor dan perubahan entity ke complete berada dalam **satu transaksi database**.
 5. Nomor tidak pernah diubah, dihapus, atau digunakan ulang.
 6. Endpoint completion harus idempotent: request ulang mengembalikan nomor yang sama.
+7. Pengguna dengan permission pengelolaan tipe dokumen dapat menetapkan `latest sequence` untuk tahun bisnis berjalan. Nilai berikutnya adalah `latest sequence + 1`; nilai tersimpan hanya boleh dipertahankan atau dinaikkan agar nomor lama tidak digunakan ulang. Perubahan ini wajib transactional dan diaudit.
 
 ### 7.2 Algoritma atomic
 
