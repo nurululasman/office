@@ -21,29 +21,29 @@
         .company-contact div { min-height: 4.5mm; }
         .company-logo { display: flex; align-items: center; justify-content: flex-end; height: 34mm; }
         .company-logo img { display: block; width: 38mm; height: 32mm; object-fit: contain; object-position: center; }
-        .brand-rule { height: .75mm; margin: 3.5mm 0 8mm; background: var(--brand-blue); }
-        .document-meta { display: grid; grid-template-columns: 62% 38%; column-gap: 8mm; margin-bottom: 3.5mm; }
+        .brand-rule { height: .75mm; margin: 1.5mm 0 3mm; background: var(--brand-blue); }
+        .document-meta { display: grid; grid-template-columns: 62% 38%; column-gap: 8mm; margin-bottom: 1.5mm; }
         .meta-row { display: grid; grid-template-columns: 27mm 4mm minmax(0, 1fr); min-height: 6mm; }
         .meta-row .label { font-weight: 500; }
-        .subject-rule { height: .35mm; margin: 1.5mm 0 5mm; background: #222; }
-        .intro { margin: 0 0 11mm; }
+        .subject-rule { height: .35mm; margin: 1mm 0 2mm; background: #222; }
+        .intro { margin: 0 0 1mm; }
         .intro p { margin: 0 0 1mm; }
-        .rate-table { width: 100%; margin: 0 0 8mm; border-collapse: collapse; table-layout: fixed; }
+        .rate-table { width: 100%; margin: 0 0 3mm; border-collapse: collapse; table-layout: fixed; }
         .rate-table thead { display: table-header-group; }
         .rate-table tbody { display: table-row-group; }
         .rate-table tr { break-inside: avoid; page-break-inside: avoid; }
-        .rate-table th, .rate-table td { padding: 0 2mm 1.8mm; border: .35mm solid #1c252d; vertical-align: middle; overflow-wrap: anywhere; }
+        .rate-table th, .rate-table td { padding: 0 2mm 0; border: .35mm solid #1c252d; vertical-align: middle; overflow-wrap: anywhere; }
         .rate-table th { background: #dceeea; font-weight: 700; text-align: center; }
         .rate-table .sequence { width: 10mm; text-align: center; }
         .rate-table .align-left { text-align: left; }
         .rate-table .align-center { text-align: center; }
         .rate-table .align-right { text-align: right; }
         .rate-table .typed-number { white-space: nowrap; }
-        .terms { margin: 0 0 11mm; padding-left: 7mm; break-inside: avoid; page-break-inside: avoid; }
-        .terms li { margin-bottom: 2mm; padding-left: 2mm; }
-        .closing { margin: 0 0 12mm; break-inside: avoid; page-break-inside: avoid; }
-        .closing p { margin: 0 0 7mm; }
-        .closing .emphasis { font-weight: 700; }
+        .terms { margin: 0 0 4mm; padding-left: 7mm; break-inside: avoid; page-break-inside: avoid; }
+        .terms li { margin-bottom: 0; padding-left: 2mm; }
+        .closing { margin: 0 0 5mm; break-inside: avoid; page-break-inside: avoid; }
+        .closing p { margin: 0 0 2mm; }
+        .closing .emphasis { font-weight: 500; }
         .signatures { display: grid; grid-template-columns: 1fr 1fr; column-gap: 30mm; margin-top: 8mm; break-inside: avoid; page-break-inside: avoid; }
         .completion-block { break-inside: avoid; page-break-inside: avoid; }
         .signature-heading { font-size: 11pt; }
