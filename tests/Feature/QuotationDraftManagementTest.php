@@ -148,6 +148,8 @@ class QuotationDraftManagementTest extends TestCase
             ->assertSee('class="company-logo"', false)
             ->assertSee('/static/jblu.png', false)
             ->assertSee('@page { size: A4 portrait; margin: 17mm 18mm 16mm; }', false)
+            ->assertSee('.quotation-page { width: 174mm; min-height: 264mm; margin: 0; padding: 0; box-shadow: none; }', false)
+            ->assertSee('.document-footer { right: 0; bottom: 0; left: 0; }', false)
             ->assertSee('object-fit: contain', false)
             ->assertSee('display: table-header-group', false)
             ->assertSee('break-inside: avoid', false)

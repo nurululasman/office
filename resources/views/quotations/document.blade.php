@@ -49,12 +49,14 @@
         .signature-heading { font-size: 11pt; }
         .signature-space { height: 25mm; }
         .signature-name { font-weight: 700; }
-        .document-footer { position: absolute; right: 18mm; bottom: 8mm; left: 18mm; color: var(--muted); font-size: 8pt; text-align: center; }
+        .document-footer { position: absolute; right: 18mm; bottom: 16mm; left: 18mm; color: var(--muted); font-size: 8pt; text-align: center; }
         @media print {
             body { background: #fff; }
             .preview-toolbar { display: none !important; }
-            .quotation-page { width: auto; min-height: auto; margin: 0; padding: 0; box-shadow: none; }
-            .document-footer { bottom: -10mm; }
+            /* Match the 174mm x 264mm inner box shown by the A4 browser preview. */
+            .quotation-page { width: 174mm; min-height: 264mm; margin: 0; padding: 0; box-shadow: none; }
+            /* Keep the footer inside the printable area to avoid a trailing page. */
+            .document-footer { right: 0; bottom: 0; left: 0; }
         }
     </style>
 </head>
