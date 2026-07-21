@@ -43,7 +43,7 @@
         .terms li { margin-bottom: 0; padding-left: 2mm; }
         .closing { margin: 0 0 5mm; break-inside: avoid; page-break-inside: avoid; }
         .closing p { margin: 0 0 2mm; }
-        .closing .emphasis { font-weight: 500; }
+        .closing .emphasis { font-weight: 700; }
         .signatures { display: grid; grid-template-columns: 1fr 1fr; column-gap: 30mm; margin-top: 8mm; break-inside: avoid; page-break-inside: avoid; }
         .completion-block { break-inside: avoid; page-break-inside: avoid; }
         .signature-heading { font-size: 11pt; }
