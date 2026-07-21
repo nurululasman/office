@@ -32,7 +32,7 @@
         .rate-table thead { display: table-header-group; }
         .rate-table tbody { display: table-row-group; }
         .rate-table tr { break-inside: avoid; page-break-inside: avoid; }
-        .rate-table th, .rate-table td { padding: 1.8mm 2mm; border: .35mm solid #1c252d; vertical-align: middle; overflow-wrap: anywhere; }
+        .rate-table th, .rate-table td { padding: 0 2mm 1.8mm; border: .35mm solid #1c252d; vertical-align: middle; overflow-wrap: anywhere; }
         .rate-table th { background: #dceeea; font-weight: 700; text-align: center; }
         .rate-table .sequence { width: 10mm; text-align: center; }
         .rate-table .align-left { text-align: left; }

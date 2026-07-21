@@ -152,6 +152,7 @@ class QuotationDraftManagementTest extends TestCase
             ->assertSee('.document-footer { right: 0; bottom: 0; left: 0; }', false)
             ->assertSee('object-fit: contain', false)
             ->assertSee('display: table-header-group', false)
+            ->assertSee('.rate-table th, .rate-table td { padding: 0 2mm 1.8mm;', false)
             ->assertSee('break-inside: avoid', false)
             ->assertSee('DRAFT')
             ->assertSee('Preview draft - bukan dokumen resmi')
