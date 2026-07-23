@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Auth\SsoController;
+use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\DocumentTypeController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\PermissionController;
@@ -29,6 +31,8 @@ Route::middleware(['auth', 'sso.session'])->group(function () {
     Route::resource('users', UserController::class)->only(['index', 'edit', 'update']);
     Route::resource('roles', RoleController::class)->except('show');
     Route::get('/permissions', PermissionController::class)->name('permissions.index');
+    Route::resource('company-profiles', CompanyProfileController::class)
+        ->middlewareFor(['store', 'update', 'destroy'], 'throttle:office-mutation');
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
     Route::get('/documents/create', [DocumentController::class, 'create'])->name('documents.create');
     Route::post('/documents', [DocumentController::class, 'store'])->middleware('throttle:office-mutation')->name('documents.store');
@@ -38,6 +42,15 @@ Route::middleware(['auth', 'sso.session'])->group(function () {
     Route::post('/document-types/preview', [DocumentTypeController::class, 'preview'])->name('document-types.preview');
     Route::patch('/document-types/{document_type}/toggle', [DocumentTypeController::class, 'toggle'])->name('document-types.toggle');
     Route::resource('document-types', DocumentTypeController::class)->except('show');
+    Route::post('/quotation-templates/{document_template}/duplicate', [DocumentTemplateController::class, 'duplicate'])->middleware('throttle:office-mutation')->name('quotation-templates.duplicate');
+    Route::post('/quotation-templates/{document_template}/activate', [DocumentTemplateController::class, 'activate'])->middleware('throttle:office-mutation')->name('quotation-templates.activate');
+    Route::post('/quotation-templates/{document_template}/archive', [DocumentTemplateController::class, 'archive'])->middleware('throttle:office-mutation')->name('quotation-templates.archive');
+    Route::get('/quotation-templates/{document_template}/preview', [DocumentTemplateController::class, 'preview'])->middleware('throttle:office-preview')->name('quotation-templates.preview');
+    Route::resource('quotation-templates', DocumentTemplateController::class)
+        ->parameters(['quotation-templates' => 'document_template'])
+        ->only(['index', 'create', 'show', 'edit']);
+    Route::post('/quotation-templates', [DocumentTemplateController::class, 'store'])->middleware('throttle:office-mutation')->name('quotation-templates.store');
+    Route::put('/quotation-templates/{document_template}', [DocumentTemplateController::class, 'update'])->middleware('throttle:office-mutation')->name('quotation-templates.update');
     Route::get('/quotations/{quotation}/preview', [QuotationController::class, 'preview'])->middleware('throttle:office-preview')->name('quotations.preview');
     Route::get('/quotations/{quotation}/pdf/preview', [QuotationController::class, 'previewPdf'])->middleware('throttle:office-preview')->name('quotations.pdf.preview');
     Route::get('/quotations/{quotation}/pdf/download', [QuotationController::class, 'downloadPdf'])->middleware('throttle:office-preview')->name('quotations.pdf.download');

@@ -94,6 +94,21 @@ class QuotationPdfGenerationTest extends TestCase
         $this->assertNull($file->generated_at);
     }
 
+    public function test_pdf_html_uses_the_same_template_renderer_and_shell_as_browser_preview(): void
+    {
+        $file = $this->completeFile();
+        $quotation = Quotation::query()->with(['document', 'items.values', 'terms'])->findOrFail($file->owner_id);
+
+        $html = app(QuotationPdfRenderer::class)->documentHtml($quotation);
+
+        $this->assertStringContainsString('data-template-rendered="true"', $html);
+        $this->assertStringContainsString('QT-JBLU-2026070001', $html);
+        $this->assertStringContainsString('Storage', $html);
+        $this->assertStringContainsString('class="rate-table"', $html);
+        $this->assertStringNotContainsString('Preview draft - bukan dokumen resmi', $html);
+        $this->assertStringNotContainsString('DRAFT — nomor belum terbit', $html);
+    }
+
     public function test_real_chrome_renderer_writes_private_pdf_and_metadata(): void
     {
         if (! filter_var(env('OFFICE_RUN_PDF_RENDERER_TESTS', false), FILTER_VALIDATE_BOOL)) {

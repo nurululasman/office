@@ -42,6 +42,23 @@ class QuotationDraftManagementTest extends TestCase
             ->assertSee('Storage service')->assertSee('125000.50')->assertSee('Belum diterbitkan');
     }
 
+    public function test_sender_title_and_customer_address_are_optional(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $template = $this->template();
+        $payload = $this->payload($template);
+        $payload['customer_address'] = '';
+        $payload['sender_title'] = '';
+
+        $this->as($maker)->post(route('quotations.store'), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $quotation = Quotation::query()->sole();
+        $this->assertNull($quotation->customer_address);
+        $this->assertNull($quotation->sender_title);
+    }
+
     public function test_validation_follows_template_value_types_and_rejects_unknown_keys(): void
     {
         $maker = $this->userWithRole('quotation-maker');
@@ -144,27 +161,20 @@ class QuotationDraftManagementTest extends TestCase
         $preview
             ->assertOk()
             ->assertSee('data-testid="quotation-preview"', false)
-            ->assertSee('class="letterhead"', false)
-            ->assertSee('class="company-logo"', false)
-            ->assertSee('/static/jblu.png', false)
+            ->assertSee('data-template-rendered="true"', false)
             ->assertSee('@page { size: A4 portrait; margin: 17mm 18mm 16mm; }', false)
-            ->assertSee('.quotation-page { width: 174mm; min-height: 264mm; margin: 0; padding: 0; box-shadow: none; }', false)
-            ->assertSee('.document-footer { right: 0; bottom: 0; left: 0; }', false)
-            ->assertSee('object-fit: contain', false)
+            ->assertSee('.quotation-page { width: auto; min-height: 254mm; margin: 0; padding: 0 0 6mm; box-shadow: none; }', false)
+            ->assertSee('.document-footer { position: static; margin-top: 6mm; transform: none; }', false)
             ->assertSee('display: table-header-group', false)
             ->assertSee('.rate-table th, .rate-table td { padding: 0 2mm 1.8mm;', false)
             ->assertSee('break-inside: avoid', false)
-            ->assertSee('DRAFT')
+            ->assertSee('DRAFT — nomor belum terbit')
             ->assertSee('Preview draft - bukan dokumen resmi')
-            ->assertSee('Alamat lengkap yang ditampilkan')
-            ->assertDontSee('Kota duplikat')
-            ->assertDontSee('99999')
-            ->assertDontSee('ZZ')
             ->assertSee('18 Juli 2026')
             ->assertSee('Rp 125.001')
             ->assertSee('Storage / day')
             ->assertDontSee('Name &amp; signature', false);
-        $this->assertSame(2, substr_count((string) $preview->getContent(), 'Customer A'));
+        $this->assertSame(1, substr_count((string) $preview->getContent(), 'Customer A'));
 
         $this->as($basic)->get(route('quotations.preview', $quotation))->assertForbidden();
     }
@@ -217,6 +227,83 @@ class QuotationDraftManagementTest extends TestCase
 
         $this->assertSame('Newer edit', $quotation->refresh()->subject);
         $this->assertSame(1, $quotation->audits()->where('action', 'quotation.updated')->count());
+    }
+
+    public function test_create_form_shows_active_template_version_and_loads_template_defaults(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $template = $this->template();
+        $template->update([
+            'default_intro_text' => 'Default introduction',
+            'default_closing_text' => 'Default closing',
+            'default_terms' => ['Term template one', 'Term template two'],
+        ]);
+
+        $this->as($maker)->get(route('quotations.create'))
+            ->assertOk()
+            ->assertSee('Container quotation')
+            ->assertSee('v1')
+            ->assertSee('Default introduction')
+            ->assertSee('Default closing')
+            ->assertSee('Term template one');
+    }
+
+    public function test_nested_list_items_are_persisted_with_parent_relationship_and_depth_is_enforced(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $template = $this->template();
+        $schema = [
+            'presentation' => ['type' => 'nested_list', 'style' => 'unordered', 'content_key' => 'description', 'max_depth' => 2],
+            'columns' => [['key' => 'description', 'label' => 'Description', 'value_type' => 'text', 'required' => true]],
+        ];
+        $template->update(['item_schema' => $schema, 'settings' => $schema]);
+        $payload = $this->payload($template);
+        $payload['items'] = [
+            ['values' => ['description' => 'Parent']],
+            ['parent_index' => 0, 'values' => ['description' => 'Child']],
+        ];
+
+        $this->as($maker)->post(route('quotations.store'), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $quotation = Quotation::query()->sole();
+        $this->assertTrue($quotation->items[1]->parent->is($quotation->items[0]));
+
+        $invalid = $payload;
+        $invalid['items'][] = ['parent_index' => 1, 'values' => ['description' => 'Too deep']];
+        $this->as($maker)->post(route('quotations.store'), $invalid)
+            ->assertSessionHasErrors('items.2.parent_index');
+    }
+
+    public function test_switching_template_refreshes_snapshot_and_save_preview_redirects_to_preview(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $first = $this->template();
+        $secondSchema = ['columns' => [['key' => 'service', 'label' => 'Service', 'value_type' => 'text', 'required' => true]]];
+        $second = $first->companyProfile->templates()->create([
+            'type' => 'quotation', 'template_key' => 'service-quotation', 'version' => 2,
+            'name' => 'Service quotation', 'status' => 'active',
+            'content_html' => '<p>Second {{ subject }}</p><div>{{ quotation_items }}</div>',
+            'settings' => $secondSchema, 'item_schema' => $secondSchema,
+        ]);
+        $this->as($maker)->post(route('quotations.store'), $this->payload($first));
+        $quotation = Quotation::query()->sole();
+
+        $payload = $this->payload($second);
+        $payload['items'] = [['values' => ['service' => 'Handling']]];
+        $payload['lock_version'] = $quotation->lock_version;
+        $payload['submit_action'] = 'preview';
+
+        $this->as($maker)->put(route('quotations.update', $quotation), $payload)
+            ->assertRedirect(route('quotations.preview', $quotation));
+
+        $quotation->refresh();
+        $this->assertSame($second->getKey(), $quotation->template_id);
+        $this->assertSame(2, $quotation->template_snapshot['template_version']);
+        $this->assertSame($second->content_html, $quotation->template_snapshot['content_html']);
+        $this->assertSame($second->content_sha256, $quotation->template_content_sha256);
+        $this->assertSame('service', $quotation->item_schema['columns'][0]['key']);
     }
 
     private function template(): DocumentTemplate

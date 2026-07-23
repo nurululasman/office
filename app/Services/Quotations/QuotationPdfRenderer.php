@@ -13,8 +13,7 @@ use Symfony\Component\Process\Process;
 class QuotationPdfRenderer
 {
     public function __construct(
-        private readonly QuotationValueFormatter $formatter,
-        private readonly QuotationTableLayout $tableLayout,
+        private readonly QuotationDocumentRenderer $documentRenderer,
     ) {}
 
     public function render(GeneratedFile $file): void
@@ -27,15 +26,7 @@ class QuotationPdfRenderer
             throw new RuntimeException('PDF resmi hanya dapat dibuat dari snapshot quotation complete yang telah bernomor.');
         }
 
-        $logo = File::get(public_path('static/jblu.png'));
-        $html = view('quotations.document', [
-            'quotation' => $quotation,
-            'formatter' => $this->formatter,
-            'tableLayout' => $this->tableLayout->build($quotation->item_schema),
-            'isDraft' => false,
-            'browserPreview' => false,
-            'logoSource' => 'data:image/png;base64,'.base64_encode($logo),
-        ])->render();
+        $html = $this->documentHtml($quotation);
 
         $temporaryDirectory = storage_path('app/private/tmp/pdf-'.Str::uuid());
         File::ensureDirectoryExists($temporaryDirectory);
@@ -73,6 +64,16 @@ class QuotationPdfRenderer
         } finally {
             File::deleteDirectory($temporaryDirectory);
         }
+    }
+
+    public function documentHtml(Quotation $quotation): string
+    {
+        return view('quotations.document', [
+            'quotation' => $quotation,
+            'renderedHtml' => $this->documentRenderer->content($quotation, false),
+            'isDraft' => false,
+            'browserPreview' => false,
+        ])->render();
     }
 
     private function chromeBinary(): string

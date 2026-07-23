@@ -11,7 +11,7 @@ class QuotationItem extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['quotation_id', 'position'];
+    protected $fillable = ['quotation_id', 'parent_item_id', 'position'];
 
     protected function casts(): array
     {
@@ -21,6 +21,16 @@ class QuotationItem extends Model
     public function quotation(): BelongsTo
     {
         return $this->belongsTo(Quotation::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_item_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_item_id')->orderBy('position');
     }
 
     public function values(): HasMany

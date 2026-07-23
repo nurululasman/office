@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\DocumentTemplate;
 use App\Models\Quotation;
+use App\Services\DocumentTemplates\QuotationItemPresentation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -34,19 +35,21 @@ class QuotationDraftRequest extends FormRequest
             'quotation_date' => ['required', 'date_format:Y-m-d'],
             'subject' => ['required', 'string', 'max:255'],
             'customer_name' => ['required', 'string', 'max:255'],
-            'customer_address' => ['required', 'string', 'max:5000'],
+            'customer_address' => ['nullable', 'string', 'max:5000'],
             'attention_name' => ['nullable', 'string', 'max:255'],
             'attention_role' => ['nullable', 'string', 'max:255'],
             'sender_name' => ['required', 'string', 'max:255'],
-            'sender_title' => ['required', 'string', 'max:255'],
+            'sender_title' => ['nullable', 'string', 'max:255'],
             'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
             'intro_text' => ['nullable', 'string', 'max:10000'],
             'closing_text' => ['nullable', 'string', 'max:10000'],
             'items' => ['required', 'array', 'min:1', 'max:100'],
+            'items.*.parent_index' => ['nullable', 'integer', 'min:0', 'max:99'],
             'items.*.values' => ['required', 'array'],
             'items.*.values.*' => ['nullable', 'string', 'max:10000'],
             'terms' => ['nullable', 'array', 'max:50'],
             'terms.*' => ['nullable', 'string', 'max:5000'],
+            'submit_action' => ['nullable', Rule::in(['save', 'preview'])],
             'lock_version' => [$this->route('quotation') instanceof Quotation ? 'required' : 'nullable', 'integer', 'min:0'],
         ];
     }
@@ -67,9 +70,37 @@ class QuotationDraftRequest extends FormRequest
                 return;
             }
 
-            foreach ((array) $this->input('items', []) as $itemIndex => $item) {
+            try {
+                $presentation = app(QuotationItemPresentation::class)->resolve($schema ?? []);
+            } catch (\LogicException $exception) {
+                $validator->errors()->add('template_id', $exception->getMessage());
+
+                return;
+            }
+
+            $items = (array) $this->input('items', []);
+            ksort($items);
+            $depths = [];
+            foreach ($items as $itemIndex => $item) {
                 $values = is_array($item['values'] ?? null) ? $item['values'] : [];
                 $allowedKeys = [];
+                $parentIndex = $item['parent_index'] ?? null;
+
+                if ($presentation['type'] !== 'nested_list' && $parentIndex !== null && $parentIndex !== '') {
+                    $validator->errors()->add("items.{$itemIndex}.parent_index", 'Parent hanya tersedia untuk template nested list.');
+                } elseif ($presentation['type'] === 'nested_list' && $parentIndex !== null && $parentIndex !== '') {
+                    $parentIndex = (int) $parentIndex;
+                    if ($parentIndex >= $itemIndex || ! array_key_exists($parentIndex, $items)) {
+                        $validator->errors()->add("items.{$itemIndex}.parent_index", 'Parent harus merujuk item sebelumnya.');
+                    } else {
+                        $depths[$itemIndex] = ($depths[$parentIndex] ?? 1) + 1;
+                        if ($depths[$itemIndex] > $presentation['max_depth']) {
+                            $validator->errors()->add("items.{$itemIndex}.parent_index", "Kedalaman sub-list melebihi batas {$presentation['max_depth']} level.");
+                        }
+                    }
+                } else {
+                    $depths[$itemIndex] = 1;
+                }
 
                 foreach ($columns as $column) {
                     if (! is_array($column) || ! is_string($column['key'] ?? null)) {

@@ -17,6 +17,17 @@ class Quotation extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (Quotation $quotation): void {
+            if ($quotation->template_snapshot !== null) {
+                return;
+            }
+
+            $template = DocumentTemplate::query()->with('companyProfile')->findOrFail($quotation->template_id);
+            $quotation->template_snapshot = $template->snapshot();
+            $quotation->template_content_sha256 = $template->content_sha256;
+            $quotation->placeholder_contract_version = DocumentTemplate::PLACEHOLDER_CONTRACT_VERSION;
+        });
+
         static::updating(function (Quotation $quotation): void {
             if (! in_array($quotation->getOriginal('status'), ['complete', 'void'], true)) {
                 return;
@@ -38,7 +49,9 @@ class Quotation extends Model
     protected function casts(): array
     {
         return [
-            'quotation_date' => 'immutable_date', 'item_schema' => 'array', 'lock_version' => 'integer',
+            'quotation_date' => 'immutable_date', 'item_schema' => 'array',
+            'template_snapshot' => 'array', 'placeholder_contract_version' => 'integer',
+            'lock_version' => 'integer',
             'submitted_at' => 'immutable_datetime', 'approved_at' => 'immutable_datetime',
             'rejected_at' => 'immutable_datetime', 'approval_bypassed_at' => 'immutable_datetime',
             'completed_at' => 'immutable_datetime',

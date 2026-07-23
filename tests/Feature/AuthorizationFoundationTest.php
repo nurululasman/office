@@ -29,14 +29,22 @@ class AuthorizationFoundationTest extends TestCase
     {
         $this->seed(RolePermissionSeeder::class);
 
-        $this->assertSame(32, Permission::query()->count());
+        $this->assertSame(39, Permission::query()->count());
         $this->assertSame(9, Role::query()->count());
-        $this->assertSame(32, Role::query()->where('slug', 'system-admin')->firstOrFail()->permissions()->count());
+        $this->assertSame(39, Role::query()->where('slug', 'system-admin')->firstOrFail()->permissions()->count());
         $this->assertSame(0, Role::query()->where('slug', 'office-user')->firstOrFail()->permissions()->count());
         $this->assertTrue(Role::query()->where('slug', 'quotation-maker')->firstOrFail()
             ->permissions()->where('slug', 'quotations.complete-direct')->exists());
         $this->assertFalse(Role::query()->where('slug', 'quotation-maker')->firstOrFail()
             ->permissions()->where('slug', 'quotations.approve')->exists());
+        $this->assertSame(5, Role::query()->where('slug', 'document-admin')->firstOrFail()
+            ->permissions()->where('group', 'quotation_templates')->count());
+        $this->assertTrue(Role::query()->where('slug', 'auditor')->firstOrFail()
+            ->permissions()->where('slug', 'quotation-template.view')->exists());
+        $this->assertTrue(Role::query()->where('slug', 'document-admin')->firstOrFail()
+            ->permissions()->where('slug', 'company-profiles.manage')->exists());
+        $this->assertTrue(Role::query()->where('slug', 'auditor')->firstOrFail()
+            ->permissions()->where('slug', 'company-profiles.read')->exists());
     }
 
     public function test_jit_user_gets_only_the_permissionless_base_role(): void

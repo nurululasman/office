@@ -55,18 +55,75 @@ class QuotationSchemaTest extends TestCase
         $this->assertTrue($file->template->is($template));
         $this->assertSame('service', $quotation->item_schema['columns'][0]['key']);
         $this->assertSame(1, $template->version);
+        $this->assertSame('quotation-default', $template->template_key);
+        $this->assertSame('active', $template->status);
+        $this->assertSame($template->content_sha256, hash('sha256', $template->content_html));
+        $this->assertSame($template->getKey(), $quotation->template_snapshot['template_id']);
+        $this->assertSame('quotation-default', $quotation->template_snapshot['template_key']);
+        $this->assertSame(1, $quotation->template_snapshot['template_version']);
+        $this->assertSame('JBLU', $quotation->template_snapshot['company_profile']['display_name']);
+        $this->assertSame($template->content_sha256, $quotation->template_content_sha256);
+        $this->assertSame(DocumentTemplate::PLACEHOLDER_CONTRACT_VERSION, $quotation->placeholder_contract_version);
     }
 
-    public function test_template_versions_are_unique_per_document_type(): void
+    public function test_template_versions_are_unique_per_template_family(): void
     {
         $template = $this->createTemplate();
 
         $this->expectException(QueryException::class);
         DocumentTemplate::query()->create([
             'company_profile_id' => $template->company_profile_id,
-            'type' => $template->type, 'version' => $template->version,
-            'name' => 'Duplicate version', 'settings' => [],
+            'type' => $template->type, 'template_key' => $template->template_key,
+            'version' => $template->version, 'status' => 'archived',
+            'name' => 'Duplicate family version', 'settings' => [],
         ]);
+    }
+
+    public function test_different_template_families_can_each_have_one_active_version(): void
+    {
+        $first = $this->createTemplate();
+
+        $second = DocumentTemplate::query()->create([
+            'company_profile_id' => $first->company_profile_id,
+            'type' => 'quotation', 'template_key' => 'quotation-general',
+            'version' => 1, 'name' => 'General quotation', 'status' => 'active',
+            'settings' => ['columns' => []],
+        ]);
+
+        $this->assertSame('active', $first->status);
+        $this->assertSame('active', $second->status);
+    }
+
+    public function test_template_family_rejects_more_than_one_active_version(): void
+    {
+        $template = $this->createTemplate();
+
+        $this->expectException(QueryException::class);
+        DocumentTemplate::query()->create([
+            'company_profile_id' => $template->company_profile_id,
+            'type' => $template->type, 'template_key' => $template->template_key,
+            'version' => 2, 'name' => 'Quotation v2', 'status' => 'active',
+            'settings' => [],
+        ]);
+    }
+
+    public function test_quotation_snapshot_does_not_change_when_template_changes(): void
+    {
+        $quotation = $this->createQuotation();
+        $template = $quotation->template;
+        $snapshot = $quotation->template_snapshot;
+
+        $template->update([
+            'name' => 'Changed after draft',
+            'content_html' => '<p>Changed</p><div>{{ quotation_items }}</div>',
+            'settings' => ['columns' => [['key' => 'changed', 'value_type' => 'text']]],
+            'item_schema' => ['columns' => [['key' => 'changed', 'value_type' => 'text']]],
+        ]);
+
+        $quotation->refresh();
+
+        $this->assertSame($snapshot, $quotation->template_snapshot);
+        $this->assertNotSame($template->fresh()->content_sha256, $quotation->template_content_sha256);
     }
 
     public function test_item_keys_and_positions_are_unique_within_an_item(): void
@@ -97,6 +154,22 @@ class QuotationSchemaTest extends TestCase
         $this->assertDatabaseMissing('quotation_items', ['id' => $item->getKey()]);
         $this->assertDatabaseMissing('quotation_item_values', ['id' => $value->getKey()]);
         $this->assertDatabaseMissing('quotation_terms', ['id' => $term->getKey()]);
+    }
+
+    public function test_deleting_parent_item_cascades_nested_children(): void
+    {
+        $quotation = $this->createQuotation();
+        $parent = $quotation->items()->create(['position' => 1]);
+        $child = $quotation->items()->create(['parent_item_id' => $parent->getKey(), 'position' => 2]);
+        $grandchild = $quotation->items()->create(['parent_item_id' => $child->getKey(), 'position' => 3]);
+
+        $this->assertTrue($child->parent->is($parent));
+        $this->assertTrue($parent->children->first()->is($child));
+
+        $parent->delete();
+
+        $this->assertDatabaseMissing('quotation_items', ['id' => $child->getKey()]);
+        $this->assertDatabaseMissing('quotation_items', ['id' => $grandchild->getKey()]);
     }
 
     private function createQuotation(): Quotation

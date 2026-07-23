@@ -3,13 +3,17 @@
 namespace App\Providers;
 
 use App\Contracts\IdentityProvider;
+use App\Models\CompanyProfile;
 use App\Models\Document;
+use App\Models\DocumentTemplate;
 use App\Models\DocumentType;
 use App\Models\Permission;
 use App\Models\Quotation;
 use App\Models\Role;
 use App\Models\User;
+use App\Policies\CompanyProfilePolicy;
 use App\Policies\DocumentPolicy;
+use App\Policies\DocumentTemplatePolicy;
 use App\Policies\DocumentTypePolicy;
 use App\Policies\PermissionPolicy;
 use App\Policies\QuotationPolicy;
@@ -43,7 +47,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('office-mutation', fn (Request $request): Limit => Limit::perMinute(30)->by((string) ($request->user()?->getKey() ?? $request->ip())));
 
         Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(CompanyProfile::class, CompanyProfilePolicy::class);
         Gate::policy(Document::class, DocumentPolicy::class);
+        Gate::policy(DocumentTemplate::class, DocumentTemplatePolicy::class);
         Gate::policy(DocumentType::class, DocumentTypePolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Permission::class, PermissionPolicy::class);

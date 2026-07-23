@@ -7,8 +7,7 @@ use App\Http\Requests\QuotationDraftRequest;
 use App\Models\DocumentTemplate;
 use App\Models\Quotation;
 use App\Services\Audit\AuditLogger;
-use App\Services\Quotations\QuotationTableLayout;
-use App\Services\Quotations\QuotationValueFormatter;
+use App\Services\Quotations\QuotationDocumentRenderer;
 use App\Services\Quotations\QuotationWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -62,7 +61,10 @@ class QuotationController extends Controller
             return $quotation;
         });
 
-        return redirect()->route('quotations.show', $quotation)->with('status', 'Draft quotation berhasil dibuat.');
+        return redirect()->route(
+            $request->validated('submit_action') === 'preview' ? 'quotations.preview' : 'quotations.show',
+            $quotation
+        )->with('status', 'Draft quotation berhasil dibuat.');
     }
 
     public function show(Quotation $quotation): View
@@ -91,17 +93,15 @@ class QuotationController extends Controller
         ]);
     }
 
-    public function preview(Quotation $quotation, QuotationValueFormatter $formatter, QuotationTableLayout $tableLayout): View
+    public function preview(Quotation $quotation, QuotationDocumentRenderer $renderer): View
     {
         Gate::authorize('preview', $quotation);
 
         return view('quotations.document', [
-            'quotation' => $quotation->load(['creator', 'items.values', 'terms']),
-            'formatter' => $formatter,
-            'tableLayout' => $tableLayout->build($quotation->item_schema),
+            'quotation' => $quotation,
+            'renderedHtml' => $renderer->content($quotation, true),
             'isDraft' => true,
             'browserPreview' => true,
-            'logoSource' => asset('static/jblu.png'),
         ]);
     }
 
@@ -133,7 +133,10 @@ class QuotationController extends Controller
             $audit->record($wasRejected ? 'quotation.revised' : 'quotation.updated', $request->user(), $locked, before: $before, after: $locked->load(['items.values', 'terms'])->toArray(), request: $request);
         });
 
-        return redirect()->route('quotations.show', $quotation)->with('status', 'Draft quotation berhasil diperbarui.');
+        return redirect()->route(
+            $request->validated('submit_action') === 'preview' ? 'quotations.preview' : 'quotations.show',
+            $quotation
+        )->with('status', 'Draft quotation berhasil diperbarui.');
     }
 
     public function complete(Quotation $quotation, Request $request, QuotationWorkflow $workflow): RedirectResponse
@@ -177,18 +180,30 @@ class QuotationController extends Controller
     private function persist(Quotation $quotation, array $data, int $creatorId): void
     {
         $template = DocumentTemplate::query()->findOrFail($data['template_id']);
-        $schema = $quotation->exists && $quotation->template_id === $template->getKey()
+        $keepsTemplate = $quotation->exists && $quotation->template_id === $template->getKey();
+        $schema = $keepsTemplate
             ? $quotation->item_schema
-            : $template->settings;
-        $quotation->fill(collect($data)->except(['items', 'terms', 'lock_version'])->all() + [
+            : $template->item_schema;
+        $quotation->fill(collect($data)->except(['items', 'terms', 'lock_version', 'submit_action'])->all() + [
             'created_by' => $creatorId,
             'approval_mode' => $quotation->exists ? $quotation->approval_mode : $this->approvalMode(),
             'item_schema' => $schema,
+            'template_snapshot' => $keepsTemplate ? $quotation->template_snapshot : $template->loadMissing('companyProfile')->snapshot(),
+            'template_content_sha256' => $keepsTemplate ? $quotation->template_content_sha256 : $template->content_sha256,
+            'placeholder_contract_version' => DocumentTemplate::PLACEHOLDER_CONTRACT_VERSION,
         ])->save();
 
         $quotation->items()->delete();
-        foreach ($data['items'] as $itemPosition => $itemData) {
-            $item = $quotation->items()->create(['position' => $itemPosition + 1]);
+        $persistedItems = [];
+        $submittedItems = $data['items'];
+        ksort($submittedItems);
+        foreach ($submittedItems as $itemPosition => $itemData) {
+            $parentIndex = $itemData['parent_index'] ?? null;
+            $item = $quotation->items()->create([
+                'parent_item_id' => $parentIndex === null || $parentIndex === '' ? null : $persistedItems[(int) $parentIndex]->getKey(),
+                'position' => $itemPosition + 1,
+            ]);
+            $persistedItems[$itemPosition] = $item;
             foreach ($schema['columns'] as $valuePosition => $column) {
                 $item->values()->create([
                     'key' => $column['key'], 'value' => $itemData['values'][$column['key']] ?? null,
@@ -210,7 +225,9 @@ class QuotationController extends Controller
 
     private function templates()
     {
-        return DocumentTemplate::query()->with('companyProfile')->where('type', 'quotation')->where('is_active', true)->orderByDesc('version')->get();
+        return DocumentTemplate::query()->with('companyProfile')
+            ->where('type', 'quotation')->where('status', 'active')
+            ->orderBy('name')->orderByDesc('version')->get();
     }
 
     private function runWorkflow(callable $action, Quotation $quotation): RedirectResponse

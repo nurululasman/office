@@ -3,13 +3,18 @@
 $permissions = [
     'administration' => [
         'users.read', 'users.manage', 'roles.read', 'roles.manage',
-        'document-types.read', 'document-types.manage', 'templates.read', 'templates.manage', 'audit-logs.read',
+        'document-types.read', 'document-types.manage', 'templates.read', 'templates.manage',
+        'company-profiles.read', 'company-profiles.manage', 'audit-logs.read',
     ],
     'documents' => ['documents.read', 'documents.issue', 'documents.void'],
     'quotations' => [
         'quotations.read', 'quotations.create', 'quotations.update-own', 'quotations.update-any',
         'quotations.submit', 'quotations.complete-direct', 'quotations.approve', 'quotations.reject',
         'quotations.void', 'quotations.pdf.read',
+    ],
+    'quotation_templates' => [
+        'quotation-template.view', 'quotation-template.create', 'quotation-template.update',
+        'quotation-template.activate', 'quotation-template.archive',
     ],
     'contracts' => [
         'contracts.read', 'contracts.create', 'contracts.update-own', 'contracts.update-any',
@@ -27,6 +32,9 @@ return [
         'system-admin' => $all,
         'document-admin' => [
             'document-types.read', 'document-types.manage', 'templates.read', 'templates.manage',
+            'company-profiles.read', 'company-profiles.manage',
+            'quotation-template.view', 'quotation-template.create', 'quotation-template.update',
+            'quotation-template.activate', 'quotation-template.archive',
         ],
         'document-officer' => ['documents.read', 'documents.issue'],
         'quotation-maker' => [
@@ -46,6 +54,8 @@ return [
         'auditor' => [
             'document-types.read', 'templates.read', 'documents.read', 'quotations.read',
             'quotations.pdf.read', 'contracts.read', 'contracts.pdf.read', 'audit-logs.read',
+            'quotation-template.view',
+            'company-profiles.read',
         ],
     ],
     'bootstrap_admin' => [

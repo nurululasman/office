@@ -29,6 +29,16 @@
                             <a class="nav-link" href="{{ route('document-types.index') }}"><span class="nav-link-title">Tipe Dokumen</span></a>
                         </li>
                     @endcan
+                    @can('viewAny', App\Models\DocumentTemplate::class)
+                        <li class="nav-item {{ request()->routeIs('quotation-templates.*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('quotation-templates.index') }}"><span class="nav-link-title">Template Quotation</span></a>
+                        </li>
+                    @endcan
+                    @can('viewAny', App\Models\CompanyProfile::class)
+                        <li class="nav-item {{ request()->routeIs('company-profiles.*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('company-profiles.index') }}"><span class="nav-link-title">Company Profile</span></a>
+                        </li>
+                    @endcan
                     @can('users.read')
                         <li class="nav-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('users.index') }}"><span class="nav-link-title">User</span></a>
