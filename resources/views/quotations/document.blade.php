@@ -46,6 +46,8 @@
         .rate-table .typed-number { white-space: nowrap; }
         .quotation-item-list { margin: 0 0 3mm; padding-left: 7mm; }
         .quotation-item-list .quotation-item-list { margin: 1mm 0 0; }
+        ol.quotation-item-list.level-2 { list-style-type: lower-alpha; }
+
         .terms { margin: 0 0 4mm; padding-left: 7mm; }
         .signatures { display: flex; gap: 30mm; margin-top: 4mm; break-inside: avoid; page-break-inside: avoid; }
         .signatures > div { flex: 1 1 0; }

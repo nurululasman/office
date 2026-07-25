@@ -142,6 +142,23 @@ class QuotationTemplateRendererTest extends TestCase
         $this->assertMatchesRegularExpression('/Root.*Child.*Grandchild/s', $html);
     }
 
+    public function test_renderer_supports_ordered_nested_list_with_alphabetical_second_level(): void
+    {
+        [$quotation] = $this->quotation([
+            'type' => 'nested_list',
+            'style' => 'ordered',
+            'content_key' => 'service',
+            'max_depth' => 2,
+        ]);
+        $root = $this->listItem($quotation, 1, 'Root Item');
+        $this->listItem($quotation, 2, 'Sub Item', $root->getKey());
+
+        $html = app(QuotationTemplateRenderer::class)->render($quotation);
+
+        $this->assertStringContainsString('<ol class="quotation-item-list level-1">', $html);
+        $this->assertStringContainsString('<ol class="quotation-item-list level-2" type="a">', $html);
+    }
+
     public function test_renderer_rejects_depth_overflow_and_cycles(): void
     {
         [$quotation] = $this->quotation([

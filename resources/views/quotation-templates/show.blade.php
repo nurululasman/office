@@ -17,6 +17,8 @@
     .template-preview-page .align-right { text-align: right; }
     .template-preview-page .typed-number { white-space: nowrap; }
     .template-preview-page .quotation-item-list, .template-preview-page .terms { padding-left: 7mm; }
+    .template-preview-page ol.quotation-item-list.level-2 { list-style-type: lower-alpha; }
+
     .template-preview-page .signatures { display: flex; gap: 30mm; margin-top: 4mm; }
     .template-preview-page .signatures > div { flex: 1 1 0; }
     .template-preview-page .signature-space { height: 18mm; }
