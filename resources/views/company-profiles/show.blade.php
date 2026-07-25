@@ -51,6 +51,9 @@
                             <dt class="col-sm-4">Tax ID</dt>
                             <dd class="col-sm-8">{{ $profile->tax_id ?: '—' }}</dd>
 
+                            <dt class="col-sm-4">Bank information</dt>
+                            <dd class="col-sm-8">{!! $profile->bank_information ? nl2br(e($profile->bank_information), false) : '&mdash;' !!}</dd>
+
                             <dt class="col-sm-4">Status</dt>
                             <dd class="col-sm-8">{{ $profile->is_active ? 'Aktif' : 'Nonaktif' }}</dd>
 

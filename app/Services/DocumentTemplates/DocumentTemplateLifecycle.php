@@ -80,7 +80,7 @@ final class DocumentTemplateLifecycle
                 $this->itemPresentation->resolve(is_array($attributes['item_schema']) ? $attributes['item_schema'] : []);
             }
             $locked->fill(collect($attributes)->only([
-                'name', 'content_html', 'item_schema', 'default_intro_text',
+                'company_profile_id', 'document_type_id', 'name', 'content_html', 'item_schema', 'default_intro_text',
                 'default_closing_text', 'default_terms', 'editor_config',
             ])->all());
             $locked->status = 'draft';
@@ -277,6 +277,7 @@ final class DocumentTemplateLifecycle
             'content_sha256' => $template->content_sha256,
             'lock_version' => $template->lock_version,
             'company_profile_id' => $template->company_profile_id,
+            'document_type_id' => $template->document_type_id,
             'activated_by' => $template->activated_by,
             'activated_at' => $template->activated_at?->toIso8601String(),
         ];

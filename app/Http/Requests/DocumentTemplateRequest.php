@@ -35,6 +35,15 @@ class DocumentTemplateRequest extends FormRequest
                     }
                 }),
             ],
+            'document_type_id' => [
+                'required', 'uuid',
+                Rule::exists('document_types', 'id')->where(function ($query) use ($template): void {
+                    $query->where('is_active', true);
+                    if ($template?->document_type_id) {
+                        $query->orWhere('id', $template->document_type_id);
+                    }
+                }),
+            ],
             'template_key' => [
                 'required', 'string', 'max:100', 'regex:/\A[a-z][a-z0-9]*(?:-[a-z0-9]+)*\z/',
                 $template
@@ -93,6 +102,7 @@ class DocumentTemplateRequest extends FormRequest
 
         return [
             'company_profile_id' => $validated['company_profile_id'],
+            'document_type_id' => $validated['document_type_id'],
             'template_key' => $validated['template_key'],
             'name' => $validated['name'],
             'content_html' => $validated['content_html'],

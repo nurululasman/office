@@ -15,7 +15,7 @@ final class DocumentTemplatePlaceholderValidator
         'customer_address', 'attention_name', 'attention_role', 'sender_name',
         'sender_title', 'currency', 'intro_text', 'closing_text',
         'company_legal_name', 'company_display_name', 'company_address',
-        'company_email', 'company_phone', 'company_website',
+        'company_email', 'company_phone', 'company_website', 'company_bank_information',
     ];
 
     /** @var list<string> */

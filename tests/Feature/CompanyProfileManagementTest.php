@@ -33,6 +33,7 @@ class CompanyProfileManagementTest extends TestCase
         $response->assertRedirect(route('company-profiles.show', $profile));
         $this->assertSame(['Jl. Example 1', 'Gedung A'], $profile->address_lines);
         $this->assertSame('ID', $profile->country);
+        $this->assertSame("Bank Information:\nAccount No. 123", $profile->bank_information);
         $this->assertMatchesRegularExpression('#^/storage/company-logos/[a-f0-9]{64}\.png$#', $profile->logo_path);
         Storage::disk('public')->assertExists(str_replace('/storage/', '', $profile->logo_path));
         $this->assertDatabaseHas('audit_logs', ['action' => 'company_profile.created', 'subject_id' => $profile->getKey()]);
@@ -134,6 +135,7 @@ class CompanyProfileManagementTest extends TestCase
             'phone' => '+62 21 123',
             'website' => 'https://example.test',
             'tax_id' => '01.234.567.8-999.000',
+            'bank_information' => "Bank Information:\nAccount No. 123",
             'primary_color' => '#087eae',
             'is_active' => '1',
         ];

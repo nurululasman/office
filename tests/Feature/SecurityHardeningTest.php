@@ -12,7 +12,7 @@ class SecurityHardeningTest extends TestCase
 {
     public function test_web_responses_include_security_headers(): void
     {
-        $this->get('/')
+        $this->get('/health/live')
             ->assertOk()
             ->assertHeader('X-Content-Type-Options', 'nosniff')
             ->assertHeader('X-Frame-Options', 'DENY')
@@ -21,7 +21,7 @@ class SecurityHardeningTest extends TestCase
             ->assertHeader('Content-Security-Policy', "base-uri 'self'; frame-ancestors 'none'; object-src 'none'")
             ->assertHeaderMissing('Strict-Transport-Security');
 
-        $this->get('https://office.example.test/')
+        $this->get('https://office.example.test/health/live')
             ->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
 

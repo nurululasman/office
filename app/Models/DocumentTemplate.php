@@ -29,7 +29,7 @@ class DocumentTemplate extends Model
 HTML;
 
     protected $fillable = [
-        'company_profile_id', 'type', 'template_key', 'version', 'name', 'status',
+        'company_profile_id', 'document_type_id', 'type', 'template_key', 'version', 'name', 'status',
         'content_html', 'content_sha256', 'settings', 'item_schema',
         'default_intro_text', 'default_closing_text', 'default_terms', 'editor_config',
         'lock_version', 'created_by', 'updated_by', 'activated_by', 'activated_at', 'is_active',
@@ -82,6 +82,11 @@ HTML;
         return $this->belongsTo(CompanyProfile::class);
     }
 
+    public function documentType(): BelongsTo
+    {
+        return $this->belongsTo(DocumentType::class);
+    }
+
     public function generatedFiles(): HasMany
     {
         return $this->hasMany(GeneratedFile::class, 'template_id');
@@ -116,6 +121,7 @@ HTML;
             'template_id' => $this->getKey(),
             'template_key' => $this->template_key,
             'template_version' => $this->version,
+            'document_type_id' => $this->document_type_id,
             'content_html' => $this->content_html,
             'item_schema' => $this->item_schema,
             'company_profile' => $profile ? [
@@ -130,6 +136,7 @@ HTML;
                 'email' => $profile->email,
                 'phone' => $profile->phone,
                 'website' => $profile->website,
+                'bank_information' => $profile->bank_information,
                 'logo_path' => $profile->logo_path,
                 'logo_sha256' => $profile->logo_sha256,
                 'primary_color' => $profile->primary_color,

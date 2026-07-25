@@ -314,7 +314,9 @@ class QuotationWorkflowTest extends TestCase
         ]);
 
         return DocumentTemplate::query()->create([
-            'company_profile_id' => $profile->getKey(), 'type' => 'quotation', 'version' => 1,
+            'company_profile_id' => $profile->getKey(),
+            'document_type_id' => DocumentType::query()->sole()->getKey(),
+            'type' => 'quotation', 'version' => 1,
             'name' => 'Quotation', 'settings' => ['columns' => [
                 ['key' => 'service', 'label' => 'Service', 'value_type' => 'text', 'required' => true],
                 ['key' => 'price', 'label' => 'Price', 'value_type' => 'currency', 'required' => true],

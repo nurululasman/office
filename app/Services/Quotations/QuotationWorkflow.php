@@ -142,9 +142,12 @@ final class QuotationWorkflow
 
     private function issueDocument(Quotation $quotation, User $actor)
     {
-        $type = DocumentType::query()->where('code', config('office.quotation_document_type_code'))->first();
+        $snapshotTypeId = $quotation->template_snapshot['document_type_id'] ?? null;
+        $type = is_string($snapshotTypeId) && $snapshotTypeId !== ''
+            ? DocumentType::query()->find($snapshotTypeId)
+            : DocumentType::query()->where('code', config('office.quotation_document_type_code'))->first();
         if (! $type) {
-            throw new QuotationWorkflowException('Tipe dokumen QUOTATION belum dikonfigurasi.');
+            throw new QuotationWorkflowException('Tipe dokumen untuk template quotation belum dikonfigurasi.');
         }
 
         return $this->issuer->issue($type, $actor, $quotation->subject, 'Quotation untuk '.$quotation->customer_name, $quotation);

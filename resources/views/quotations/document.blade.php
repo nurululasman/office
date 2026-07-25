@@ -19,6 +19,8 @@
         * { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; }
         body { background: #e6ebf0; color: var(--ink); font: 10.5pt/1.38 Arial, Helvetica, sans-serif; }
+        h2 { margin: 0 0 1.5mm; font-size: 14pt; font-weight: 700; }
+        p { margin: 0 0 1.5mm; }
         hr { margin:3mm 0 3mm; border: 0; border-top: .45mm solid {{ $primaryColor }}; }
         .preview-toolbar { position: sticky; top: 0; z-index: 20; padding: 10px 16px; background: #16212c; color: #fff; text-align: center; }
         .preview-toolbar button { margin-left: 12px; padding: 7px 16px; border: 0; border-radius: 4px; cursor: pointer; }

@@ -113,6 +113,7 @@
                     ['Email perusahaan', 'company_email'],
                     ['Telepon perusahaan', 'company_phone'],
                     ['Website perusahaan', 'company_website'],
+                    ['Informasi bank perusahaan', 'company_bank_information'],
                 ];
                 const structuralPlaceholders = [
                     ['Logo perusahaan', 'company_logo'],

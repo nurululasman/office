@@ -122,7 +122,7 @@ class CompanyProfileController extends Controller
     {
         return $profile->only([
             'company_code', 'legal_name', 'display_name', 'address_lines', 'city',
-            'postal_code', 'country', 'email', 'phone', 'website', 'tax_id',
+            'postal_code', 'country', 'email', 'phone', 'website', 'tax_id', 'bank_information',
             'logo_path', 'logo_sha256', 'primary_color', 'is_active',
         ]);
     }

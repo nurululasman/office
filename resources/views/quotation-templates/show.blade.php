@@ -77,6 +77,7 @@
                             <dt class="col-5">Key</dt><dd class="col-7"><code>{{ $template->template_key }}</code></dd>
                             <dt class="col-5">Status</dt><dd class="col-7">{{ ucfirst($template->status) }}</dd>
                             <dt class="col-5">Perusahaan</dt><dd class="col-7">{{ $template->companyProfile->display_name }}</dd>
+                            <dt class="col-5">Document type</dt><dd class="col-7">{{ $template->documentType ? $template->documentType->name.' ('.$template->documentType->code.')' : 'Belum ditentukan' }}</dd>
                             <dt class="col-5">Checksum</dt><dd class="col-7 text-break"><code>{{ $template->content_sha256 }}</code></dd>
                             <dt class="col-5">Lock version</dt><dd class="col-7">{{ $template->lock_version }}</dd>
                         </dl>

@@ -38,6 +38,7 @@ class CompanyProfileRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:50'],
             'website' => ['nullable', 'url:http,https', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:100'],
+            'bank_information' => ['nullable', 'string', 'max:10000'],
             'primary_color' => ['nullable', 'regex:/^#[0-9A-F]{6}$/'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
             'is_active' => ['required', 'boolean'],
@@ -65,6 +66,7 @@ class CompanyProfileRequest extends FormRequest
             'company_code' => strtoupper(trim((string) $this->input('company_code'))),
             'country' => strtoupper(trim((string) $this->input('country', 'ID'))),
             'primary_color' => strtoupper(trim((string) $this->input('primary_color'))) ?: null,
+            'bank_information' => $this->nullableTrimmed('bank_information'),
             'is_active' => $this->boolean('is_active'),
         ]);
     }
@@ -85,5 +87,12 @@ class CompanyProfileRequest extends FormRequest
             array_map('trim', preg_split('/\R/u', $this->string('address_lines_text')->toString()) ?: []),
             static fn (string $line): bool => $line !== '',
         ));
+    }
+
+    private function nullableTrimmed(string $key): ?string
+    {
+        $value = trim((string) $this->input($key));
+
+        return $value === '' ? null : $value;
     }
 }

@@ -102,6 +102,7 @@ final class QuotationTemplateRenderer
             'company_email' => (string) ($company['email'] ?? ''),
             'company_phone' => (string) ($company['phone'] ?? ''),
             'company_website' => (string) ($company['website'] ?? ''),
+            'company_bank_information' => (string) ($company['bank_information'] ?? ''),
         ];
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DocumentTemplateRequest;
 use App\Models\CompanyProfile;
 use App\Models\DocumentTemplate;
+use App\Models\DocumentType;
 use App\Services\DocumentTemplates\DocumentTemplateLifecycle;
 use App\Services\DocumentTemplates\DocumentTemplatePreviewFactory;
 use App\Services\Quotations\QuotationDocumentRenderer;
@@ -53,6 +54,7 @@ class DocumentTemplateController extends Controller
                 'item_schema' => ['columns' => []],
             ]),
             'companyProfiles' => $this->companyProfiles(),
+            'documentTypes' => $this->documentTypes(),
         ]);
     }
 
@@ -74,7 +76,7 @@ class DocumentTemplateController extends Controller
         QuotationDocumentRenderer $renderer,
     ): View {
         Gate::authorize('view', $documentTemplate);
-        $documentTemplate->load(['companyProfile', 'creator', 'updater', 'activator']);
+        $documentTemplate->load(['companyProfile', 'documentType', 'creator', 'updater', 'activator']);
 
         try {
             $quotation = $previewFactory->make($documentTemplate);
@@ -122,6 +124,7 @@ class DocumentTemplateController extends Controller
         return view('quotation-templates.form', [
             'template' => $documentTemplate,
             'companyProfiles' => $this->companyProfiles($documentTemplate->company_profile_id),
+            'documentTypes' => $this->documentTypes($documentTemplate->document_type_id),
         ]);
     }
 
@@ -195,6 +198,15 @@ class DocumentTemplateController extends Controller
             ->where(fn ($query) => $query->where('is_active', true)
                 ->when($includeId, fn ($query) => $query->orWhere('id', $includeId)))
             ->orderBy('display_name')
+            ->get();
+    }
+
+    private function documentTypes(?string $includeId = null)
+    {
+        return DocumentType::query()
+            ->where(fn ($query) => $query->where('is_active', true)
+                ->when($includeId, fn ($query) => $query->orWhere('id', $includeId)))
+            ->orderBy('name')
             ->get();
     }
 

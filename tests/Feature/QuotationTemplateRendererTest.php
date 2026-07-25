@@ -39,6 +39,8 @@ class QuotationTemplateRendererTest extends TestCase
         $this->assertStringContainsString('Customer &lt;b&gt;unsafe&lt;/b&gt;', $html);
         $this->assertStringContainsString('Line 1<br>', $html);
         $this->assertStringContainsString('Line 2', $html);
+        $this->assertStringContainsString('Bank Mandiri<br>', $html);
+        $this->assertStringContainsString('Account No. &lt;123&gt;', $html);
         $this->assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $html);
         $this->assertStringContainsString('Rp 125.001', $html);
         $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
@@ -186,6 +188,7 @@ class QuotationTemplateRendererTest extends TestCase
             'postal_code' => '10110',
             'country' => 'ID',
             'email' => 'office@example.test',
+            'bank_information' => "Bank Mandiri\nAccount No. <123>",
         ]);
         $schema = ['columns' => [
             ['key' => 'service', 'label' => 'Service', 'value_type' => 'text', 'required' => true],
@@ -204,6 +207,7 @@ class QuotationTemplateRendererTest extends TestCase
             'content_html' => implode('', [
                 '<div>{{ draft_watermark }}</div>',
                 '<h1>{{ company_display_name }}</h1>',
+                '<p>{{ company_bank_information }}</p>',
                 '<div>{{ company_logo }}</div>',
                 '<p>{{ quotation_number }}</p>',
                 '<p>{{ quotation_date }}</p>',

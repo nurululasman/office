@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\CompanyProfile;
 use App\Models\DocumentTemplate;
+use App\Models\DocumentType;
 use App\Models\User;
 use App\Services\DocumentTemplates\DocumentTemplateHtmlSanitizer;
 use Database\Seeders\RolePermissionSeeder;
@@ -18,6 +19,7 @@ class DocumentTemplateManagementTest extends TestCase
     use RefreshDatabase;
 
     private CompanyProfile $profile;
+    private DocumentType $documentType;
 
     protected function setUp(): void
     {
@@ -31,6 +33,12 @@ class DocumentTemplateManagementTest extends TestCase
             'city' => 'Jakarta',
             'postal_code' => '10110',
             'country' => 'ID',
+        ]);
+        $this->documentType = DocumentType::query()->create([
+            'code' => 'QUOTATION',
+            'name' => 'Quotation',
+            'number_pattern' => 'QT-{SEQ:4}',
+            'approval_mode' => 'direct',
         ]);
     }
 
@@ -52,6 +60,7 @@ class DocumentTemplateManagementTest extends TestCase
 
         $template = DocumentTemplate::query()->sole();
         $this->assertSame('quotation-general', $template->template_key);
+        $this->assertTrue($template->documentType->is($this->documentType));
         $this->assertSame('draft', $template->status);
         $this->assertSame(['Term one', 'Term two'], $template->default_terms);
         $this->assertDatabaseHas('audit_logs', ['action' => 'quotation_template.created']);
@@ -311,6 +320,7 @@ class DocumentTemplateManagementTest extends TestCase
     {
         return array_replace([
             'company_profile_id' => $this->profile->getKey(),
+            'document_type_id' => $this->documentType->getKey(),
             'template_key' => 'quotation-general',
             'name' => 'General',
             'content_html' => '<script>not executed</script><div>{{ quotation_items }}</div>',
@@ -330,6 +340,7 @@ class DocumentTemplateManagementTest extends TestCase
     ): DocumentTemplate {
         return DocumentTemplate::query()->create([
             'company_profile_id' => $this->profile->getKey(),
+            'document_type_id' => $this->documentType->getKey(),
             'type' => 'quotation',
             'template_key' => $key,
             'version' => $version,
