@@ -115,8 +115,8 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-header"><h2 class="card-title">Item schema</h2></div>
-                    <div class="card-body"><pre class="text-wrap mb-0">{{ json_encode($template->item_schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre></div>
+                    <div class="card-header"><h2 class="card-title">Format item</h2></div>
+<div class="card-body"><p class="text-secondary mb-0">Format item ditentukan langsung di dalam HTML template dan dapat diedit kembali saat quotation dibuat.</p></div>
                 </div>
             </div>
         </div>

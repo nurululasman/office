@@ -3,7 +3,6 @@
 namespace App\Services\DocumentTemplates;
 
 use App\Models\Quotation;
-use App\Services\Quotations\QuotationTableLayout;
 use App\Services\Quotations\QuotationValueFormatter;
 use Illuminate\Support\HtmlString;
 use RuntimeException;
@@ -14,8 +13,6 @@ final class QuotationTemplateRenderer
         private readonly DocumentTemplateHtmlSanitizer $sanitizer,
         private readonly DocumentTemplatePlaceholderValidator $placeholders,
         private readonly QuotationValueFormatter $formatter,
-        private readonly QuotationTableLayout $tableLayout,
-        private readonly QuotationItemPresentation $itemPresentation,
     ) {}
 
     public function render(
@@ -24,45 +21,79 @@ final class QuotationTemplateRenderer
         ?string $logoSource = null,
         bool $requireActivationContract = true,
     ): string {
-        $quotation->loadMissing(['document', 'items.values', 'terms']);
+        $quotation->loadMissing(['document', 'terms']);
         $snapshot = $quotation->template_snapshot;
         if (! is_array($snapshot) || ! is_string($snapshot['content_html'] ?? null)) {
             throw new RuntimeException('Quotation belum memiliki snapshot template yang valid.');
         }
 
-        $html = $snapshot['content_html'];
-        if (! hash_equals((string) $quotation->template_content_sha256, hash('sha256', $html))) {
+        $templateHtml = $snapshot['content_html'];
+        if (! hash_equals((string) $quotation->template_content_sha256, hash('sha256', $templateHtml))) {
             throw new RuntimeException('Checksum snapshot template quotation tidak cocok.');
         }
-
-        $sanitized = $this->sanitizer->sanitize($html);
-        if (! hash_equals(hash('sha256', $html), hash('sha256', $sanitized))) {
+        $sanitizedTemplate = $this->sanitizer->sanitize($templateHtml);
+        if (! hash_equals(hash('sha256', $templateHtml), hash('sha256', $sanitizedTemplate))) {
             throw new RuntimeException('Snapshot template tidak berada dalam bentuk HTML tersanitasi canonical.');
         }
         if ($requireActivationContract) {
-            $this->placeholders->validateForActivation($sanitized);
+            $this->placeholders->validateForActivation($sanitizedTemplate);
         } else {
-            $this->placeholders->validateDraft($sanitized);
+            $this->placeholders->validateDraft($sanitizedTemplate);
+        }
+
+        $itemHtml = $quotation->content_html;
+        if (! is_string($itemHtml) || $itemHtml === '') {
+            throw new RuntimeException('Quotation belum memiliki konten item HTML.');
+        }
+        if (! hash_equals((string) $quotation->content_sha256, hash('sha256', $itemHtml))) {
+            throw new RuntimeException('Checksum konten item HTML quotation tidak cocok.');
+        }
+        $sanitizedItems = $this->sanitizer->sanitize($itemHtml);
+        if (! hash_equals(hash('sha256', $itemHtml), hash('sha256', $sanitizedItems))) {
+            throw new RuntimeException('Konten item quotation tidak berada dalam bentuk HTML tersanitasi canonical.');
+        }
+
+        $termsHtml = $quotation->terms_html;
+        if (! is_string($termsHtml) || $termsHtml === '') {
+            throw new RuntimeException('Quotation belum memiliki konten terms HTML.');
+        }
+        if (! hash_equals((string) $quotation->terms_sha256, hash('sha256', $termsHtml))) {
+            throw new RuntimeException('Checksum konten terms HTML quotation tidak cocok.');
+        }
+        $sanitizedTerms = $this->sanitizer->sanitize($termsHtml);
+        if (! hash_equals(hash('sha256', $termsHtml), hash('sha256', $sanitizedTerms))) {
+            throw new RuntimeException('Konten terms quotation tidak berada dalam bentuk HTML tersanitasi canonical.');
         }
 
         $scalar = $this->scalarValues($quotation, $snapshot, $isDraft);
-        $structural = $this->structuralValues($quotation, $snapshot, $isDraft, $logoSource);
+        $structural = $this->structuralValues($quotation, $snapshot, $isDraft, $logoSource, $sanitizedItems, $sanitizedTerms);
 
-        $rendered = preg_replace_callback(
-            '/\{\{\s*([a-z][a-z0-9_]*)\s*\}\}/',
-            function (array $match) use ($scalar, $structural): string {
-                $placeholder = $match[1];
-                if (array_key_exists($placeholder, $structural)) {
-                    return $structural[$placeholder];
-                }
-                if (array_key_exists($placeholder, $scalar)) {
-                    return $this->escapedMultiline($scalar[$placeholder]);
-                }
+        $rendered = $sanitizedTemplate;
+        for ($pass = 0; $pass < 5; $pass++) {
+            if (preg_match('/\{\{\s*[a-z][a-z0-9_]*\s*\}\}/', $rendered) !== 1) {
+                break;
+            }
 
-                throw new RuntimeException("Placeholder {$placeholder} tidak dapat dirender.");
-            },
-            $sanitized,
-        );
+            $rendered = preg_replace_callback(
+                '/\{\{\s*([a-z][a-z0-9_]*)\s*\}\}/',
+                function (array $match) use ($scalar, $structural): string {
+                    $placeholder = $match[1];
+                    if (array_key_exists($placeholder, $structural)) {
+                        return $structural[$placeholder];
+                    }
+                    if (array_key_exists($placeholder, $scalar)) {
+                        return $this->escapedMultiline($scalar[$placeholder]);
+                    }
+
+                    throw new RuntimeException("Placeholder {$placeholder} tidak dapat dirender.");
+                },
+                $rendered,
+            );
+
+            if (! is_string($rendered)) {
+                throw new RuntimeException('Renderer gagal memproses placeholder quotation.');
+            }
+        }
 
         if (! is_string($rendered) || str_contains($rendered, '{{') || str_contains($rendered, '}}')) {
             throw new RuntimeException('Renderer meninggalkan placeholder yang belum diproses.');
@@ -115,31 +146,18 @@ final class QuotationTemplateRenderer
         array $snapshot,
         bool $isDraft,
         ?string $logoSource,
+        string $itemHtml,
+        string $termsHtml,
     ): array {
-        $schema = is_array($snapshot['item_schema'] ?? null)
-            ? $snapshot['item_schema']
-            : $quotation->item_schema;
         $company = is_array($snapshot['company_profile'] ?? null) ? $snapshot['company_profile'] : [];
-        $presentation = $this->itemPresentation->resolve($schema);
 
         return [
+            'quotation_items' => $itemHtml,
             'company_logo' => view('quotation-templates.components.company-logo', [
                 'logoSource' => $logoSource,
                 'companyName' => (string) ($company['display_name'] ?? $company['legal_name'] ?? ''),
             ])->render(),
-            'quotation_items' => $presentation['type'] === 'table'
-                ? view('quotation-templates.components.items', [
-                    'quotation' => $quotation,
-                    'formatter' => $this->formatter,
-                    'tableLayout' => $this->tableLayout->build($schema),
-                ])->render()
-                : view('quotation-templates.components.list', [
-                    'nodes' => $this->listNodes($quotation, $schema, $presentation),
-                    'tag' => $presentation['style'] === 'ordered' ? 'ol' : 'ul',
-                ])->render(),
-            'quotation_terms' => view('quotation-templates.components.terms', [
-                'terms' => $quotation->terms,
-            ])->render(),
+            'quotation_terms' => $termsHtml,
             'signature_block' => view('quotation-templates.components.signature', [
                 'quotation' => $quotation,
             ])->render(),
@@ -154,74 +172,4 @@ final class QuotationTemplateRenderer
         return (new HtmlString(nl2br(e($value), false)))->toHtml();
     }
 
-    /**
-     * @param  array<string, mixed>  $schema
-     * @param  array{type: string, style: string, content_key: string|null, max_depth: int}  $presentation
-     * @return list<array{content: string, children: array}>
-     */
-    private function listNodes(Quotation $quotation, array $schema, array $presentation): array
-    {
-        $items = $quotation->items;
-        $byId = $items->keyBy(fn ($item): string => (string) $item->getKey());
-        if ($presentation['type'] === 'list' && $items->contains(fn ($item): bool => $item->parent_item_id !== null)) {
-            throw new RuntimeException('Mode list tidak menerima sub-list.');
-        }
-
-        $children = [];
-        foreach ($items as $item) {
-            $parentId = $item->parent_item_id ? (string) $item->parent_item_id : '';
-            if ($parentId !== '' && ! $byId->has($parentId)) {
-                throw new RuntimeException('Parent item quotation tidak berada dalam snapshot quotation yang sama.');
-            }
-            $children[$parentId][] = $item;
-        }
-
-        $column = collect($schema['columns'] ?? [])->first(
-            fn ($candidate): bool => is_array($candidate) && ($candidate['key'] ?? null) === $presentation['content_key'],
-        );
-        if (! is_array($column)) {
-            throw new RuntimeException('Content key list tidak ditemukan pada item schema snapshot.');
-        }
-
-        $state = [];
-        $build = function ($item, int $depth) use (&$build, &$state, $children, $column, $quotation, $presentation): array {
-            $id = (string) $item->getKey();
-            if (($state[$id] ?? null) === 'visiting') {
-                throw new RuntimeException('Hierarchy item quotation mengandung circular reference.');
-            }
-            if ($depth > $presentation['max_depth']) {
-                throw new RuntimeException('Hierarchy item quotation melebihi max depth template.');
-            }
-
-            $state[$id] = 'visiting';
-            $value = $item->values->firstWhere('key', $presentation['content_key']);
-            $node = [
-                'content' => $this->formatter->format(
-                    $value?->value,
-                    (string) ($column['value_type'] ?? 'text'),
-                    $quotation->currency,
-                ),
-                'children' => [],
-            ];
-            foreach ($children[$id] ?? [] as $child) {
-                $node['children'][] = $build($child, $depth + 1);
-            }
-            $state[$id] = 'visited';
-
-            return $node;
-        };
-
-        $nodes = [];
-        foreach ($children[''] ?? [] as $root) {
-            $nodes[] = $build($root, 1);
-        }
-        foreach ($items as $item) {
-            if (($state[(string) $item->getKey()] ?? null) !== 'visited') {
-                $build($item, 1);
-                throw new RuntimeException('Hierarchy item quotation tidak memiliki root yang valid.');
-            }
-        }
-
-        return $nodes;
-    }
 }

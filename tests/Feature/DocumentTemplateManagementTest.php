@@ -68,12 +68,12 @@ class DocumentTemplateManagementTest extends TestCase
         $this->as($admin)->get(route('quotation-templates.show', $template))->assertOk()
             ->assertSee('Preview visual')
             ->assertSee('data-template-preview="true"', false)
-            ->assertSee('Service contoh 1')
+            ->assertSee('Item contoh')
             ->assertDontSee('Preview visual melalui renderer akan ditambahkan')
             ->assertSee('{{ quotation_items }}');
         $this->as($admin)->get(route('quotation-templates.preview', $template))->assertOk()
             ->assertSee('data-template-rendered="true"', false)
-            ->assertSee('Service contoh 1')
+            ->assertSee('Item contoh')
             ->assertDontSee('{{ quotation_items }}');
         $this->assertStringNotContainsString('<script', $template->content_html);
 
@@ -87,26 +87,13 @@ class DocumentTemplateManagementTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'quotation_template.updated']);
     }
 
-    public function test_validation_rejects_duplicate_family_invalid_schema_and_stale_update(): void
+    public function test_validation_rejects_duplicate_family_and_stale_update_without_item_schema(): void
     {
         $admin = $this->userWithRole('document-admin');
         $template = $this->template('quotation-general', 1, 'draft');
 
         $this->as($admin)->post(route('quotation-templates.store'), $this->payload())
             ->assertSessionHasErrors('template_key');
-
-        $this->as($admin)->put(route('quotation-templates.update', $template), $this->payload([
-            'item_schema_json' => '{"invalid":true}',
-            'lock_version' => 0,
-        ]))->assertSessionHasErrors('item_schema_json');
-
-        $this->as($admin)->put(route('quotation-templates.update', $template), $this->payload([
-            'item_schema_json' => json_encode([
-                'columns' => [['key' => 'service', 'label' => 'Service', 'value_type' => 'text']],
-                'presentation' => ['type' => 'nested_list', 'content_key' => 'missing', 'max_depth' => 3],
-            ], JSON_THROW_ON_ERROR),
-            'lock_version' => 0,
-        ]))->assertSessionHasErrors('item_schema_json');
 
         $template->update(['lock_version' => 1]);
         $this->as($admin)->put(route('quotation-templates.update', $template), $this->payload([
@@ -196,7 +183,7 @@ class DocumentTemplateManagementTest extends TestCase
             'content_html' => '<p onclick="alert(1)" style="text-align:center;color:red">Penawaran é</p>'
                 .'<iframe src="https://example.test"></iframe>'
                 .'<a href="javascript:alert(1)">Link text</a>'
-                .'<div>{{ quotation_items }}</div>',
+                .'<table><tr><td>Item bebas</td></tr></table>',
         ]))->assertRedirect();
 
         $content = DocumentTemplate::query()->where('template_key', 'quotation-sanitized')->sole()->content_html;
@@ -210,12 +197,12 @@ class DocumentTemplateManagementTest extends TestCase
 
         $this->as($admin)->post(route('quotation-templates.store'), $this->payload([
             'template_key' => 'quotation-unknown',
-            'content_html' => '<p>{{ customer_secret }}</p><div>{{ quotation_items }}</div>',
+            'content_html' => '<p>{{ customer_secret }}</p><table><tr><td>Item bebas</td></tr></table>',
         ]))->assertSessionHasErrors('template');
 
         $this->as($admin)->post(route('quotation-templates.store'), $this->payload([
             'template_key' => 'quotation-malformed',
-            'content_html' => '<p>{{ customer_name </p><div>{{ quotation_items }}</div>',
+            'content_html' => '<p>{{ customer_name </p><table><tr><td>Item bebas</td></tr></table>',
         ]))->assertSessionHasErrors('template');
     }
 
@@ -231,7 +218,7 @@ class DocumentTemplateManagementTest extends TestCase
         <p class="unknown page-break" style="text-align:RIGHT; background:url(https://example.test/x); position:fixed">Safe text</p>
         <table border="9999" style="width:100%; border-collapse:collapse; color:red"><tr><td colspan="2" rowspan="invalid" style="vertical-align:TOP">Cell</td></tr></table>
         <hr class="unknown page-break">
-        <div>{{ quotation_items }}</div>
+        <table><tr><td>Item bebas</td></tr></table>
         HTML;
 
         $sanitized = app(DocumentTemplateHtmlSanitizer::class)->sanitize($html);
@@ -274,7 +261,7 @@ class DocumentTemplateManagementTest extends TestCase
 
         $this->as($admin)->post(route('quotation-templates.store'), $this->payload([
             'template_key' => 'quotation-bad-placement',
-            'content_html' => '<p>Before {{ quotation_items }}</p>',
+            'content_html' => '<p>Before {{ company_logo }}</p>',
         ]))->assertSessionHasErrors('template');
     }
 
@@ -323,10 +310,7 @@ class DocumentTemplateManagementTest extends TestCase
             'document_type_id' => $this->documentType->getKey(),
             'template_key' => 'quotation-general',
             'name' => 'General',
-            'content_html' => '<script>not executed</script><div>{{ quotation_items }}</div>',
-            'item_schema_json' => json_encode(['columns' => [
-                ['key' => 'service', 'label' => 'Service', 'value_type' => 'text'],
-            ]], JSON_THROW_ON_ERROR),
+            'content_html' => '<script>not executed</script>'.DocumentTemplate::LEGACY_CONTENT_HTML.'<table><tr><td>Item bebas</td></tr></table>',
             'default_intro_text' => 'Intro',
             'default_closing_text' => 'Closing',
             'default_terms_text' => "Term one\nTerm two",
@@ -347,9 +331,8 @@ class DocumentTemplateManagementTest extends TestCase
             'name' => 'Template',
             'status' => $status,
             'content_html' => $status === 'draft' && $key === 'quotation-incomplete'
-                ? '<div>{{ quotation_items }}</div>'
+                ? '<p>Template belum lengkap</p>'
                 : DocumentTemplate::LEGACY_CONTENT_HTML,
-            'item_schema' => ['columns' => []],
         ]);
     }
 

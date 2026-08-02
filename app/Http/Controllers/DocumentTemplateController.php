@@ -51,7 +51,6 @@ class DocumentTemplateController extends Controller
         return view('quotation-templates.form', [
             'template' => new DocumentTemplate([
                 'content_html' => DocumentTemplate::LEGACY_CONTENT_HTML,
-                'item_schema' => ['columns' => []],
             ]),
             'companyProfiles' => $this->companyProfiles(),
             'documentTypes' => $this->documentTypes(),

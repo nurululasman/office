@@ -8,6 +8,7 @@
         }
 
         const fallback = document.getElementById('tinymce-fallback');
+        const itemOnly = textarea.dataset.editorMode === 'item';
         if (! window.tinymce) {
             fallback?.classList.remove('d-none');
 
@@ -15,7 +16,7 @@
         }
 
         window.tinymce.init({
-            target: textarea,
+            selector: '#content_html, #terms_html',
             base_url: '/libs/tinymce',
             suffix: '.min',
             skin: 'oxide',
@@ -28,7 +29,7 @@
                 'undo redo | blocks | bold italic underline',
                 'alignleft aligncenter alignright alignjustify',
                 'bullist numlist | table pagebreak',
-                'removeformat | placeholders | searchreplace visualblocks code preview | wordcount',
+                `removeformat | ${itemOnly ? '' : 'placeholders |'} searchreplace visualblocks code preview | wordcount`,
             ].join(' | '),
             toolbar_mode: 'sliding',
             statusbar: true,
@@ -94,6 +95,11 @@
                 '.mce-pagebreak { border-top: 2px dashed #8b96a3; }',
             ].join(' '),
             setup: (editor) => {
+                if (itemOnly) {
+                    editor.on('change input undo redo', () => editor.save());
+
+                    return;
+                }
                 const scalarPlaceholders = [
                     ['Nomor quotation', 'quotation_number'],
                     ['Tanggal quotation', 'quotation_date'],
@@ -117,7 +123,7 @@
                 ];
                 const structuralPlaceholders = [
                     ['Logo perusahaan', 'company_logo'],
-                    ['Tabel item quotation', 'quotation_items'],
+                    ['Konten item quotation', 'quotation_items'],
                     ['Terms quotation', 'quotation_terms'],
                     ['Blok tanda tangan', 'signature_block'],
                     ['Watermark draft', 'draft_watermark'],

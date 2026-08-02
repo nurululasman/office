@@ -20,7 +20,7 @@ class QuotationDraftManagementTest extends TestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_maker_can_create_and_view_draft_with_dynamic_columns(): void
+    public function test_maker_can_create_and_view_draft_with_free_form_html_items(): void
     {
         $maker = $this->userWithRole('quotation-maker');
         $template = $this->template();
@@ -32,14 +32,16 @@ class QuotationDraftManagementTest extends TestCase
         $this->assertSame('draft', $quotation->status);
         $this->assertNull($quotation->document_id);
         $this->assertTrue($quotation->creator->is($maker));
-        $this->assertSame(['description', 'unit_price', 'available'], $quotation->items->first()->values->pluck('key')->all());
-        $this->assertSame('125000.50', $quotation->items->first()->values[1]->value);
-        $this->assertSame('currency', $quotation->items->first()->values[1]->value_type);
-        $this->assertSame(['TOP 30 days', 'VAT excluded'], $quotation->terms->pluck('content')->all());
+        $this->assertStringContainsString('<td>Storage / day</td>', $quotation->content_html);
+        $this->assertSame(hash('sha256', $quotation->content_html), $quotation->content_sha256);
+        $this->assertStringContainsString('TOP 30 days', $quotation->terms_html);
+        $this->assertSame(hash('sha256', $quotation->terms_html), $quotation->terms_sha256);
+        $this->assertDatabaseCount('quotation_items', 0);
+        $this->assertDatabaseCount('quotation_terms', 0);
         $this->assertDatabaseHas('audit_logs', ['action' => 'quotation.created', 'subject_id' => $quotation->getKey()]);
 
         $this->as($maker)->get(route('quotations.show', $quotation))->assertOk()
-            ->assertSee('Storage service')->assertSee('125000.50')->assertSee('Belum diterbitkan');
+            ->assertSee('Storage service')->assertSee('Belum diterbitkan');
     }
 
     public function test_sender_title_and_customer_address_are_optional(): void
@@ -59,7 +61,7 @@ class QuotationDraftManagementTest extends TestCase
         $this->assertNull($quotation->sender_title);
     }
 
-    public function test_validation_follows_template_value_types_and_rejects_unknown_keys(): void
+    public function obsolete_validation_follows_template_value_types_and_rejects_unknown_keys(): void
     {
         $maker = $this->userWithRole('quotation-maker');
         $template = $this->template();
@@ -113,32 +115,40 @@ class QuotationDraftManagementTest extends TestCase
         $this->as($auditor)->get(route('quotations.create'))->assertForbidden();
     }
 
-    public function test_existing_draft_keeps_its_schema_snapshot_when_template_changes(): void
+    public function test_existing_draft_keeps_its_template_snapshot_when_template_changes(): void
     {
         $maker = $this->userWithRole('quotation-maker');
         $template = $this->template();
-        $this->as($maker)->post(route('quotations.store'), $this->payload($template));
+        $payload = $this->payload($template);
+        $payload['closing_text'] = 'Thank you for giving {{company_display_name}} the opportunity.';
+        $this->as($maker)->post(route('quotations.store'), $payload);
         $quotation = Quotation::query()->sole();
         $template->update([
             'is_active' => false,
-            'settings' => ['columns' => [['key' => 'replacement', 'label' => 'Replacement', 'value_type' => 'text', 'required' => true]]],
+            'content_html' => str_replace('Isi item quotation di sini', 'Template replacement', DocumentTemplate::LEGACY_CONTENT_HTML),
         ]);
 
         $payload = $this->payload($template);
+        $payload['content_html'] = $quotation->content_html;
         $payload['subject'] = 'Snapshot retained';
         $payload['lock_version'] = $quotation->lock_version;
         $this->as($maker)->put(route('quotations.update', $quotation), $payload)->assertSessionHasNoErrors();
 
         $quotation->refresh();
-        $this->assertSame('description', $quotation->item_schema['columns'][0]['key']);
-        $this->assertSame(['description', 'unit_price', 'available'], $quotation->items->first()->values->pluck('key')->all());
+        $this->assertSame($template->getKey(), $quotation->template_snapshot['template_id']);
+        $this->assertStringContainsString('Storage / day', $quotation->content_html);
+        $this->assertStringNotContainsString('Template replacement', $quotation->content_html);
     }
 
     public function test_create_form_requires_active_quotation_template(): void
     {
         $maker = $this->userWithRole('quotation-maker');
 
-        $this->as($maker)->get(route('quotations.create'))->assertOk()->assertSee('Pilih template');
+        $this->as($maker)->get(route('quotations.create'))->assertOk()
+            ->assertSee('Pilih template')
+            ->assertSee('data-editor-mode="item"', false)
+            ->assertSee('<textarea class="form-control" id="content_html" name="content_html" rows="20" required data-editor-mode="item"></textarea>', false)
+            ->assertSee('<textarea class="form-control" id="terms_html" name="terms_html" rows="12" required data-editor-mode="item"></textarea>', false);
         $this->as($maker)->post(route('quotations.store'), [])->assertSessionHasErrors('template_id');
     }
 
@@ -153,7 +163,9 @@ class QuotationDraftManagementTest extends TestCase
             'postal_code' => '99999',
             'country' => 'ZZ',
         ]);
-        $this->as($maker)->post(route('quotations.store'), $this->payload($template));
+        $payload = $this->payload($template);
+        $payload['closing_text'] = 'Thank you for giving {{company_display_name}} the opportunity.';
+        $this->as($maker)->post(route('quotations.store'), $payload);
         $quotation = Quotation::query()->sole();
 
         $preview = $this->as($maker)->get(route('quotations.preview', $quotation));
@@ -171,8 +183,9 @@ class QuotationDraftManagementTest extends TestCase
             ->assertSee('DRAFT — nomor belum terbit')
             ->assertSee('Preview draft - bukan dokumen resmi')
             ->assertSee('18 Juli 2026')
-            ->assertSee('Rp 125.001')
+            ->assertSee('125000.50')
             ->assertSee('Storage / day')
+            ->assertSee('Thank you for giving JBLU the opportunity.')
             ->assertDontSee('Name &amp; signature', false);
         $this->assertSame(1, substr_count((string) $preview->getContent(), 'Customer A'));
 
@@ -248,7 +261,7 @@ class QuotationDraftManagementTest extends TestCase
             ->assertSee('Term template one');
     }
 
-    public function test_nested_list_items_are_persisted_with_parent_relationship_and_depth_is_enforced(): void
+    public function obsolete_nested_list_items_are_persisted_with_parent_relationship_and_depth_is_enforced(): void
     {
         $maker = $this->userWithRole('quotation-maker');
         $template = $this->template();
@@ -284,7 +297,7 @@ class QuotationDraftManagementTest extends TestCase
         $second = $first->companyProfile->templates()->create([
             'type' => 'quotation', 'template_key' => 'service-quotation', 'version' => 2,
             'name' => 'Service quotation', 'status' => 'active',
-            'content_html' => '<p>Second {{ subject }}</p><div>{{ quotation_items }}</div>',
+            'content_html' => DocumentTemplate::LEGACY_CONTENT_HTML.'<p>Service item</p>',
             'settings' => $secondSchema, 'item_schema' => $secondSchema,
         ]);
         $this->as($maker)->post(route('quotations.store'), $this->payload($first));
@@ -303,7 +316,7 @@ class QuotationDraftManagementTest extends TestCase
         $this->assertSame(2, $quotation->template_snapshot['template_version']);
         $this->assertSame($second->content_html, $quotation->template_snapshot['content_html']);
         $this->assertSame($second->content_sha256, $quotation->template_content_sha256);
-        $this->assertSame('service', $quotation->item_schema['columns'][0]['key']);
+        $this->assertStringContainsString('Storage / day', $quotation->content_html);
     }
 
     private function template(): DocumentTemplate
@@ -332,6 +345,8 @@ class QuotationDraftManagementTest extends TestCase
             'customer_address' => 'Jakarta', 'attention_name' => 'Budi', 'attention_role' => 'Manager',
             'sender_name' => 'Sales JBLU', 'sender_title' => 'Sales Manager', 'currency' => 'IDR',
             'intro_text' => 'Our offer', 'closing_text' => 'Thank you',
+            'content_html' => '<table style="border-collapse: collapse; width: 100%" border="1"><tbody><tr><td>Storage / day</td><td>125000.50</td></tr></tbody></table>',
+            'terms_html' => '<ol><li>TOP 30 days</li><li>VAT excluded</li></ol>',
             'items' => [['values' => ['description' => 'Storage / day', 'unit_price' => '125000.50', 'available' => 'true']]],
             'terms' => ['TOP 30 days', 'VAT excluded'],
         ];

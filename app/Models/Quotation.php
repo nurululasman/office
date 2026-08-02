@@ -18,6 +18,8 @@ class Quotation extends Model
     protected static function booted(): void
     {
         static::creating(function (Quotation $quotation): void {
+            // Kept empty only for the legacy physical column; items live in content_html.
+            $quotation->item_schema ??= [];
             if ($quotation->template_snapshot !== null) {
                 return;
             }
@@ -49,7 +51,8 @@ class Quotation extends Model
     protected function casts(): array
     {
         return [
-            'quotation_date' => 'immutable_date', 'item_schema' => 'array',
+            'quotation_date' => 'immutable_date',
+            'item_schema' => 'array',
             'template_snapshot' => 'array', 'placeholder_contract_version' => 'integer',
             'lock_version' => 'integer',
             'submitted_at' => 'immutable_datetime', 'approved_at' => 'immutable_datetime',
@@ -71,11 +74,6 @@ class Quotation extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(DocumentTemplate::class);
-    }
-
-    public function items(): HasMany
-    {
-        return $this->hasMany(QuotationItem::class)->orderBy('position');
     }
 
     public function terms(): HasMany

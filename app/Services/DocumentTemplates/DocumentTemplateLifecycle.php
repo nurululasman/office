@@ -17,7 +17,6 @@ final class DocumentTemplateLifecycle
         private readonly AuditLogger $audit,
         private readonly DocumentTemplateHtmlSanitizer $sanitizer,
         private readonly DocumentTemplatePlaceholderValidator $placeholders,
-        private readonly QuotationItemPresentation $itemPresentation,
     ) {}
 
     /**
@@ -32,7 +31,6 @@ final class DocumentTemplateLifecycle
         return DB::transaction(function () use ($attributes, $actor, $request): DocumentTemplate {
             $attributes['content_html'] = $this->sanitizer->sanitize((string) ($attributes['content_html'] ?? ''));
             $this->placeholders->validateDraft($attributes['content_html']);
-            $this->itemPresentation->resolve(is_array($attributes['item_schema'] ?? null) ? $attributes['item_schema'] : []);
             $template = DocumentTemplate::query()->create(array_merge($attributes, [
                 'type' => 'quotation',
                 'status' => 'draft',
@@ -76,11 +74,8 @@ final class DocumentTemplateLifecycle
                 $attributes['content_html'] = $this->sanitizer->sanitize((string) $attributes['content_html']);
                 $this->placeholders->validateDraft($attributes['content_html']);
             }
-            if (array_key_exists('item_schema', $attributes)) {
-                $this->itemPresentation->resolve(is_array($attributes['item_schema']) ? $attributes['item_schema'] : []);
-            }
             $locked->fill(collect($attributes)->only([
-                'company_profile_id', 'document_type_id', 'name', 'content_html', 'item_schema', 'default_intro_text',
+                'company_profile_id', 'document_type_id', 'name', 'content_html', 'default_intro_text',
                 'default_closing_text', 'default_terms', 'editor_config',
             ])->all());
             $locked->status = 'draft';
@@ -165,7 +160,6 @@ final class DocumentTemplateLifecycle
             $before = $this->auditState($locked);
             $locked->content_html = $this->sanitizer->sanitize($locked->content_html);
             $this->placeholders->validateForActivation($locked->content_html);
-            $this->itemPresentation->resolve($locked->item_schema);
 
             $active = DocumentTemplate::query()
                 ->where('type', $locked->type)

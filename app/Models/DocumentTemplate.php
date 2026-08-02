@@ -30,7 +30,7 @@ HTML;
 
     protected $fillable = [
         'company_profile_id', 'document_type_id', 'type', 'template_key', 'version', 'name', 'status',
-        'content_html', 'content_sha256', 'settings', 'item_schema',
+        'content_html', 'content_sha256',
         'default_intro_text', 'default_closing_text', 'default_terms', 'editor_config',
         'lock_version', 'created_by', 'updated_by', 'activated_by', 'activated_at', 'is_active',
     ];
@@ -46,17 +46,9 @@ HTML;
             $template->is_active = $template->status === 'active';
             $template->content_html ??= self::LEGACY_CONTENT_HTML;
             $template->content_sha256 = hash('sha256', $template->content_html);
-
-            if ($template->isDirty('settings') && ! $template->isDirty('item_schema')) {
-                $template->item_schema = $template->settings ?? [];
-            } elseif ($template->isDirty('item_schema') && ! $template->isDirty('settings')) {
-                $template->settings = $template->item_schema ?? [];
-            } elseif ($template->item_schema === null) {
-                $template->item_schema = $template->settings ?? [];
-            }
-            if ($template->settings === null) {
-                $template->settings = $template->item_schema ?? [];
-            }
+            // Kept empty only for the legacy physical columns; no quotation logic reads them.
+            $template->settings ??= [];
+            $template->item_schema ??= [];
 
             $template->default_terms ??= [];
             $template->editor_config ??= [];
@@ -123,7 +115,6 @@ HTML;
             'template_version' => $this->version,
             'document_type_id' => $this->document_type_id,
             'content_html' => $this->content_html,
-            'item_schema' => $this->item_schema,
             'company_profile' => $profile ? [
                 'id' => $profile->getKey(),
                 'company_code' => $profile->company_code,

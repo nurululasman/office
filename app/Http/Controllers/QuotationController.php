@@ -7,6 +7,7 @@ use App\Http\Requests\QuotationDraftRequest;
 use App\Models\DocumentTemplate;
 use App\Models\Quotation;
 use App\Services\Audit\AuditLogger;
+use App\Services\DocumentTemplates\DocumentTemplateHtmlSanitizer;
 use App\Services\Quotations\QuotationDocumentRenderer;
 use App\Services\Quotations\QuotationWorkflow;
 use Illuminate\Http\RedirectResponse;
@@ -72,7 +73,7 @@ class QuotationController extends Controller
         Gate::authorize('view', $quotation);
 
         return view('quotations.show', [
-            'quotation' => $quotation->load(['creator', 'document.voider', 'items.values', 'terms', 'submitter', 'approver', 'rejecter', 'completer', 'generatedFiles']),
+            'quotation' => $quotation->load(['creator', 'document.voider', 'terms', 'submitter', 'approver', 'rejecter', 'completer', 'generatedFiles']),
             'audits' => $quotation->audits()->with('actor')->oldest('occurred_at')->get(),
         ]);
     }
@@ -87,7 +88,7 @@ class QuotationController extends Controller
         }
 
         return view('quotations.form', [
-            'quotation' => $quotation->load(['items.values', 'terms']),
+            'quotation' => $quotation->load(['terms']),
             'templates' => $templates,
             'selectedTemplateId' => $quotation->template_id,
         ]);
@@ -123,14 +124,14 @@ class QuotationController extends Controller
                 throw ValidationException::withMessages(['lock_version' => 'Draft telah berubah atau tidak lagi dapat diedit. Muat ulang halaman.']);
             }
             $wasRejected = $locked->status === 'rejected';
-            $before = $locked->load(['items.values', 'terms'])->toArray();
+            $before = $locked->load(['terms'])->toArray();
             $this->persist($locked, $request->validated(), $locked->created_by);
             if ($wasRejected) {
                 $locked->status = 'draft';
                 $locked->save();
             }
             $locked->increment('lock_version');
-            $audit->record($wasRejected ? 'quotation.revised' : 'quotation.updated', $request->user(), $locked, before: $before, after: $locked->load(['items.values', 'terms'])->toArray(), request: $request);
+            $audit->record($wasRejected ? 'quotation.revised' : 'quotation.updated', $request->user(), $locked, before: $before, after: $locked->load(['terms'])->toArray(), request: $request);
         });
 
         return redirect()->route(
@@ -181,41 +182,20 @@ class QuotationController extends Controller
     {
         $template = DocumentTemplate::query()->findOrFail($data['template_id']);
         $keepsTemplate = $quotation->exists && $quotation->template_id === $template->getKey();
-        $schema = $keepsTemplate
-            ? $quotation->item_schema
-            : $template->item_schema;
-        $quotation->fill(collect($data)->except(['items', 'terms', 'lock_version', 'submit_action'])->all() + [
+        $contentHtml = app(DocumentTemplateHtmlSanitizer::class)->sanitize((string) $data['content_html']);
+        $termsHtml = app(DocumentTemplateHtmlSanitizer::class)->sanitize((string) $data['terms_html']);
+        $quotation->fill(collect($data)->except(['content_html', 'terms_html', 'lock_version', 'submit_action'])->all() + [
             'created_by' => $creatorId,
             'approval_mode' => $quotation->exists ? $quotation->approval_mode : $this->approvalMode(),
-            'item_schema' => $schema,
             'template_snapshot' => $keepsTemplate ? $quotation->template_snapshot : $template->loadMissing('companyProfile')->snapshot(),
+            'content_html' => $contentHtml,
+            'content_sha256' => hash('sha256', $contentHtml),
+            'terms_html' => $termsHtml,
+            'terms_sha256' => hash('sha256', $termsHtml),
             'template_content_sha256' => $keepsTemplate ? $quotation->template_content_sha256 : $template->content_sha256,
             'placeholder_contract_version' => DocumentTemplate::PLACEHOLDER_CONTRACT_VERSION,
         ])->save();
 
-        $quotation->items()->delete();
-        $persistedItems = [];
-        $submittedItems = $data['items'];
-        ksort($submittedItems);
-        foreach ($submittedItems as $itemPosition => $itemData) {
-            $parentIndex = $itemData['parent_index'] ?? null;
-            $item = $quotation->items()->create([
-                'parent_item_id' => $parentIndex === null || $parentIndex === '' ? null : $persistedItems[(int) $parentIndex]->getKey(),
-                'position' => $itemPosition + 1,
-            ]);
-            $persistedItems[$itemPosition] = $item;
-            foreach ($schema['columns'] as $valuePosition => $column) {
-                $item->values()->create([
-                    'key' => $column['key'], 'value' => $itemData['values'][$column['key']] ?? null,
-                    'value_type' => $column['value_type'], 'position' => $valuePosition + 1,
-                ]);
-            }
-        }
-
-        $quotation->terms()->delete();
-        foreach (array_values(array_filter($data['terms'] ?? [], fn ($term) => trim((string) $term) !== '')) as $position => $term) {
-            $quotation->terms()->create(['position' => $position + 1, 'content' => trim($term)]);
-        }
     }
 
     private function approvalMode(): string

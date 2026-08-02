@@ -2,7 +2,17 @@
 
 ## 1. Tujuan
 
-Pengguna yang berwenang dapat membuat dan mengelola template quotation menggunakan TinyMCE lokal di `public/libs/tinymce`. Ketika membuat quotation baru, pengguna cukup memilih template aktif lalu mengisi data quotation.
+Pengguna yang berwenang dapat membuat dan mengelola template quotation menggunakan TinyMCE lokal di `public/libs/tinymce`. Ketika membuat quotation baru, pengguna memperoleh TinyMCE kosong yang khusus digunakan untuk mengisi item quotation.
+
+## Keputusan format item (2026-08-02)
+
+- Template quotation tidak menggunakan `item_schema`.
+- Quotation tidak menyimpan item sebagai baris/kolom terstruktur.
+- Template tetap menentukan kerangka dokumen dan posisi `<div>{{ quotation_items }}</div>`.
+- TinyMCE quotation tidak memuat seluruh template; tersedia editor kosong terpisah untuk item dan terms.
+- HTML item disimpan pada `quotations.content_html`, sedangkan HTML terms disimpan pada `quotations.terms_html`; keduanya disanitasi dan memiliki checksum SHA-256 sendiri.
+- Tabel, daftar, judul, dan format item sepenuhnya ditentukan oleh HTML di dalam editor.
+- Data lama berbasis item schema tidak dimigrasikan ke kontrak baru ini.
 
 Implementasi menggunakan pendekatan **WYSIWYG terkontrol**:
 

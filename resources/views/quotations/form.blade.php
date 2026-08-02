@@ -6,14 +6,7 @@
 @php
     $isEdit = $quotation->exists;
     $selected = old('template_id', $selectedTemplateId ?: $templates->first()?->getKey());
-    $itemIndexes = $quotation->items?->values()->mapWithKeys(fn ($item, $index) => [$item->getKey() => $index]) ?? collect();
-    $existingItems = old('items', $quotation->items?->values()->map(fn ($item) => [
-        'parent_index' => $item->parent_item_id ? $itemIndexes->get($item->parent_item_id) : null,
-        'values' => $item->values->pluck('value', 'key')->all(),
-    ])->all() ?: [['parent_index' => null, 'values' => []]]);
-    $existingTerms = old('terms', $quotation->terms?->pluck('content')->all() ?: ['']);
     $templateSettings = $templates->mapWithKeys(fn ($template) => [$template->getKey() => [
-        'schema' => $template->item_schema,
         'defaults' => [
             'intro_text' => $template->default_intro_text,
             'closing_text' => $template->default_closing_text,
@@ -22,7 +15,6 @@
     ]]);
     if ($quotation->exists) {
         $templateSettings[$quotation->template_id] = [
-            'schema' => $quotation->item_schema,
             'defaults' => ['intro_text' => null, 'closing_text' => null, 'terms' => []],
         ];
     }
@@ -46,89 +38,32 @@
         <div class="col-md-6"><label class="form-label" for="intro_text">Pengantar</label><textarea class="form-control" id="intro_text" name="intro_text">{{ old('intro_text', $quotation->intro_text ?? $templates->firstWhere('id', $selected)?->default_intro_text) }}</textarea></div>
         <div class="col-md-6"><label class="form-label" for="closing_text">Penutup</label><textarea class="form-control" id="closing_text" name="closing_text">{{ old('closing_text', $quotation->closing_text ?? $templates->firstWhere('id', $selected)?->default_closing_text) }}</textarea></div>
     </div></div></div>
-    <div class="card mb-3"><div class="card-header"><h2 class="card-title">Item dinamis</h2><div class="card-actions"><button class="btn btn-sm" type="button" id="add-item">Tambah item</button></div></div><div class="card-body"><div id="items"></div></div></div>
-    <div class="card mb-3"><div class="card-header"><h2 class="card-title">Terms</h2><div class="card-actions"><button class="btn btn-sm" type="button" id="add-term">Tambah term</button></div></div><div class="card-body"><div id="terms"></div></div></div>
+    <div class="card mb-3"><div class="card-header"><h2 class="card-title">Item quotation</h2></div><div class="card-body"><label class="form-label" for="content_html">Isi item</label><textarea class="form-control" id="content_html" name="content_html" rows="20" required data-editor-mode="item">{{ old('content_html', $quotation->exists ? $quotation->content_html : '') }}</textarea><div class="form-hint">Editor ini hanya untuk item quotation. Buat tabel, daftar, dan format item secara bebas; hasilnya disimpan sebagai HTML yang telah disanitasi.</div><div class="alert alert-warning mt-2 d-none" id="tinymce-fallback" role="status">Editor visual tidak dapat dimuat. Konten item masih dapat diedit sebagai HTML source.</div></div></div>
+    <div class="card mb-3"><div class="card-header"><h2 class="card-title">Terms quotation</h2></div><div class="card-body"><label class="form-label" for="terms_html">Isi terms</label><textarea class="form-control" id="terms_html" name="terms_html" rows="12" required data-editor-mode="item">{{ old('terms_html', $quotation->exists ? $quotation->terms_html : '') }}</textarea><div class="form-hint">Editor ini hanya untuk terms quotation. Gunakan daftar, tabel, atau format HTML lain sesuai kebutuhan.</div></div></div>
     <div class="text-end"><button class="btn me-2" type="submit" name="submit_action" value="preview" @disabled($templates->isEmpty())>Simpan &amp; preview</button><button class="btn btn-primary" type="submit" name="submit_action" value="save" @disabled($templates->isEmpty())>Simpan draft</button></div>
 </form></div></div>
 @endsection
 
 @push('scripts')
+<script src="{{ asset('libs/tinymce/tinymce.min.js') }}"></script>
+<script src="{{ asset('js/quotation-template-editor.js') }}"></script>
 <script>
 (() => {
     const templates = @json($templateSettings);
-    const initialItems = @json($existingItems);
-    const selectedDefaults = templates[@json($selected)]?.defaults ?? {};
-    const initialTerms = @json(old('terms', $quotation->exists ? $quotation->terms?->pluck('content')->all() : null)) ?? (selectedDefaults.terms?.length ? selectedDefaults.terms : ['']);
     const templateSelect = document.getElementById('template_id');
-    const items = document.getElementById('items');
-    const terms = document.getElementById('terms');
     const intro = document.getElementById('intro_text');
     const closing = document.getElementById('closing_text');
-    const escapeHtml = value => String(value ?? '').replace(/[&<>"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[char]));
-    const inputType = type => type === 'date' ? 'date' : (['decimal', 'integer', 'currency'].includes(type) ? 'number' : 'text');
-    const schema = () => templates[templateSelect.value]?.schema ?? {};
-
-    function parentOptions(index, selected) {
-        if (schema()?.presentation?.type !== 'nested_list' || index === 0) return '';
-        const options = Array.from({length: index}, (_, parent) => `<option value="${parent}" ${selected !== null && Number(selected) === parent ? 'selected' : ''}>Item ${parent + 1}</option>`).join('');
-        return `<div class="col-md-4"><label class="form-label">Sub-item dari</label><select class="form-select parent-index" name="items[${index}][parent_index]"><option value="">Item utama</option>${options}</select></div>`;
-    }
-    function addItem(values = {}, parentIndex = null) {
-        const index = items.children.length;
-        const columns = schema().columns ?? [];
-        const wrapper = document.createElement('div');
-        wrapper.className = 'border rounded p-3 mb-3 quotation-item';
-        wrapper.innerHTML = `<div class="d-flex justify-content-between mb-2"><strong>Item ${index + 1}</strong><button type="button" class="btn btn-sm btn-outline-danger remove">Hapus</button></div><div class="row g-2">${parentOptions(index, parentIndex)}` + columns.map(column => `<div class="col-md-4"><label class="form-label">${escapeHtml(column.label)} <span class="text-secondary">(${escapeHtml(column.value_type)})</span></label><input class="form-control" type="${inputType(column.value_type)}" ${column.value_type === 'integer' ? 'step="1"' : (['decimal','currency'].includes(column.value_type) ? 'step="any"' : '')} name="items[${index}][values][${escapeHtml(column.key)}]" value="${escapeHtml(values[column.key])}" ${column.required ? 'required' : ''}></div>`).join('') + '</div>';
-        wrapper.querySelector('.remove').addEventListener('click', () => {
-            const removedIndex = [...items.children].indexOf(wrapper);
-            items.querySelectorAll('.parent-index').forEach(parent => {
-                if (parent.value === '') return;
-                const current = Number(parent.value);
-                parent.value = current === removedIndex ? '' : String(current > removedIndex ? current - 1 : current);
-            });
-            wrapper.remove();
-            renumberItems();
-        });
-        items.appendChild(wrapper);
-    }
-    function renumberItems() {
-        [...items.children].forEach((row, index) => {
-            row.querySelector('strong').textContent = `Item ${index + 1}`;
-            row.querySelectorAll('input').forEach(input => input.name = input.name.replace(/items\[\d+\]/, `items[${index}]`));
-            const parent = row.querySelector('.parent-index');
-            if (parent) {
-                const selected = parent.value === '' ? null : Number(parent.value);
-                parent.closest('.col-md-4').outerHTML = parentOptions(index, selected !== null && selected < index ? selected : null);
-            }
-        });
-    }
-    function addTerm(value = '') {
-        const index = terms.children.length;
-        const row = document.createElement('div');
-        row.className = 'input-group mb-2';
-        row.innerHTML = `<span class="input-group-text">${index + 1}</span><textarea class="form-control" name="terms[${index}]" maxlength="5000">${escapeHtml(value)}</textarea><button class="btn btn-outline-danger" type="button">Hapus</button>`;
-        row.querySelector('button').onclick = () => { row.remove(); renumberTerms(); };
-        terms.appendChild(row);
-    }
-    function renumberTerms() {
-        [...terms.children].forEach((row, index) => {
-            row.querySelector('span').textContent = index + 1;
-            row.querySelector('textarea').name = `terms[${index}]`;
-        });
-    }
     templateSelect.addEventListener('change', () => {
         const defaults = templates[templateSelect.value]?.defaults ?? {};
         intro.value = defaults.intro_text ?? '';
         closing.value = defaults.closing_text ?? '';
-        items.innerHTML = '';
-        addItem();
-        terms.innerHTML = '';
-        (defaults.terms?.length ? defaults.terms : ['']).forEach(addTerm);
+        const editor = window.tinymce?.get('content_html');
+        const termsEditor = window.tinymce?.get('terms_html');
+        if (editor) editor.setContent('');
+        else document.getElementById('content_html').value = '';
+        if (termsEditor) termsEditor.setContent('');
+        else document.getElementById('terms_html').value = '';
     });
-    document.getElementById('add-item').onclick = () => addItem();
-    document.getElementById('add-term').onclick = () => addTerm();
-    initialItems.forEach(item => addItem(item.values ?? {}, item.parent_index ?? null));
-    initialTerms.forEach(addTerm);
 })()
 </script>
 @endpush

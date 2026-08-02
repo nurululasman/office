@@ -3,10 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Models\DocumentTemplate;
-use App\Services\DocumentTemplates\QuotationItemPresentation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Validator;
 
 class DocumentTemplateRequest extends FormRequest
 {
@@ -52,35 +50,11 @@ class DocumentTemplateRequest extends FormRequest
             ],
             'name' => ['required', 'string', 'max:255'],
             'content_html' => ['required', 'string', 'max:200000'],
-            'item_schema_json' => ['required', 'string', 'max:100000'],
             'default_intro_text' => ['nullable', 'string', 'max:10000'],
             'default_closing_text' => ['nullable', 'string', 'max:10000'],
             'default_terms_text' => ['nullable', 'string', 'max:50000'],
             'lock_version' => [$template ? 'required' : 'nullable', 'integer', 'min:0'],
         ];
-    }
-
-    public function after(): array
-    {
-        return [function (Validator $validator): void {
-            $schema = json_decode((string) $this->input('item_schema_json'), true);
-            if (! is_array($schema)) {
-                $validator->errors()->add('item_schema_json', 'Item schema harus berupa JSON object yang valid.');
-
-                return;
-            }
-            if (! is_array($schema['columns'] ?? null)) {
-                $validator->errors()->add('item_schema_json', 'Item schema harus memiliki array columns.');
-
-                return;
-            }
-
-            try {
-                app(QuotationItemPresentation::class)->resolve($schema);
-            } catch (\LogicException $exception) {
-                $validator->errors()->add('item_schema_json', $exception->getMessage());
-            }
-        }];
     }
 
     protected function prepareForValidation(): void
@@ -106,7 +80,6 @@ class DocumentTemplateRequest extends FormRequest
             'template_key' => $validated['template_key'],
             'name' => $validated['name'],
             'content_html' => $validated['content_html'],
-            'item_schema' => json_decode($validated['item_schema_json'], true, flags: JSON_THROW_ON_ERROR),
             'default_intro_text' => $validated['default_intro_text'] ?? null,
             'default_closing_text' => $validated['default_closing_text'] ?? null,
             'default_terms' => array_values(array_filter(array_map('trim', $terms), fn (string $term): bool => $term !== '')),

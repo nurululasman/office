@@ -19,7 +19,7 @@ class QuotationPdfRenderer
     public function render(GeneratedFile $file): void
     {
         $quotation = Quotation::query()->with([
-            'document', 'template.companyProfile', 'items.values', 'terms',
+            'document', 'template.companyProfile', 'terms',
         ])->findOrFail($file->owner_id);
 
         if ($file->owner_type !== $quotation->getMorphClass() || $quotation->status !== 'complete' || $quotation->document_id === null) {
