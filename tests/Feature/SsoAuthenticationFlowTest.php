@@ -9,14 +9,26 @@ use App\Data\Identity\SsoTokenSet;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\Identity\SsoUserProvisioner;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use League\OAuth2\Client\Token\AccessToken;
 use Mockery;
 use Tests\TestCase;
 
 class SsoAuthenticationFlowTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        if (DB::getDriverName() === 'sqlite' && ! Schema::hasTable('users')) {
+            $this->artisan('migrate');
+        }
+        $this->seed(RolePermissionSeeder::class);
+    }
 
     public function test_sso_callback_provisions_user_syncs_profile_and_logout_revokes_token(): void
     {
@@ -51,12 +63,13 @@ class SsoAuthenticationFlowTest extends TestCase
         $loginResponse = $this->get('/auth/login')->assertRedirect();
         parse_str((string) parse_url($loginResponse->headers->get('Location'), PHP_URL_QUERY), $query);
 
-        $this->get('/auth/callback?'.http_build_query([
+        $callbackResponse = $this->get('/auth/callback?'.http_build_query([
             'state' => $query['state'],
             'code' => 'authorization-code',
-        ]))->assertRedirect(route('office.home'));
+        ]));
 
         $user = User::query()->sole();
+        $callbackResponse->assertRedirect(route('users.edit', $user));
         $this->assertAuthenticatedAs($user);
         $this->assertSame($profile->subject, $user->sso_subject);
         $this->assertSame($profile->email, $user->email);
@@ -134,10 +147,59 @@ class SsoAuthenticationFlowTest extends TestCase
         ));
 
         $this->assertTrue($user->is($updated));
-        $this->assertSame('new-name', $updated->name);
+        $this->assertSame('old-name', $updated->name);
         $this->assertSame('new.email@example.test', $updated->email);
         $this->assertSame('https://sso.example.test/new-avatar.png', $updated->avatar_url);
         $this->assertNotNull($updated->last_login_at);
+    }
+
+    public function test_returning_user_sso_callback_redirects_to_office_home(): void
+    {
+        $existing = User::factory()->create([
+            'sso_issuer' => 'https://sso.example.test',
+            'sso_subject' => '019f72be-returning-user',
+            'email' => 'returning@example.test',
+            'name' => 'Returning User',
+            'last_login_at' => now()->subDay(),
+        ]);
+        $existing->assignRole('office-user');
+
+        $provider = Mockery::mock(IdentityProvider::class);
+        $this->app->instance(IdentityProvider::class, $provider);
+
+        $profile = new SsoProfile(
+            issuer: $existing->sso_issuer,
+            subject: $existing->sso_subject,
+            tenantId: 'tenant-office',
+            email: $existing->email,
+            name: 'Returning User',
+            avatarUrl: null,
+        );
+        $tokens = new SsoTokenSet(new AccessToken([
+            'access_token' => 'access-token-returning',
+            'refresh_token' => null,
+            'expires' => time() + 3600,
+        ]));
+
+        $provider->shouldReceive('authorizationRequest')
+            ->once()
+            ->andReturnUsing(fn (string $state, string $verifier) => new AuthorizationRequest(
+                'https://sso.example.test/oauth/authorize?state='.$state,
+                $state,
+                $verifier,
+            ));
+        $provider->shouldReceive('exchangeAuthorizationCode')->once()->andReturn($tokens);
+        $provider->shouldReceive('profile')->once()->with($tokens)->andReturn($profile);
+
+        $loginResponse = $this->get('/auth/login')->assertRedirect();
+        parse_str((string) parse_url($loginResponse->headers->get('Location'), PHP_URL_QUERY), $query);
+
+        $this->get('/auth/callback?'.http_build_query([
+            'state' => $query['state'],
+            'code' => 'auth-code',
+        ]))->assertRedirect(route('office.home'));
+
+        $this->assertAuthenticatedAs($existing);
     }
 
     public function test_invalid_or_expired_local_sso_session_logs_the_user_out(): void

@@ -27,6 +27,7 @@ final class SsoUserProvisioner
             }
 
             $isNew = $user === null;
+            $isFirstLogin = $isNew || $user->last_login_at === null;
 
             $user ??= new User([
                 'sso_issuer' => $profile->issuer,
@@ -52,6 +53,8 @@ final class SsoUserProvisioner
             $user->forceFill($attributes)->save();
 
             $user->assignRole('office-user');
+
+            $user->was_first_login = $isFirstLogin;
 
             return $user;
         }, 3);

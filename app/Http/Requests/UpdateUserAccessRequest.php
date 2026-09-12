@@ -27,7 +27,7 @@ class UpdateUserAccessRequest extends FormRequest
         }
 
         if ($actor->is($user)) {
-            return $actor->hasPermissionTo('users.manage') || $actor->hasPermissionTo('users.read');
+            return true;
         }
 
         if ($this->has('roles') && ! $actor->can('assignRoles', $user)) {

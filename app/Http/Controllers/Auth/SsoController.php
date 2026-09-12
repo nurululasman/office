@@ -54,6 +54,8 @@ class SsoController extends Controller
             );
             $user = $provisioner->provision($identity->profile);
 
+            $isFirstLogin = (bool) ($user->was_first_login ?? false);
+
             Auth::login($user);
             $request->session()->regenerate();
             $tokenSession->store($request->session(), $identity->tokens);
@@ -61,9 +63,13 @@ class SsoController extends Controller
                 'auth.login.succeeded',
                 actor: $user,
                 subject: $user,
-                context: ['issuer' => $identity->profile->issuer],
+                context: ['issuer' => $identity->profile->issuer, 'is_first_login' => $isFirstLogin],
                 request: $request,
             );
+
+            if ($isFirstLogin) {
+                return redirect()->route('users.edit', $user)->with('status', 'Selamat datang di JBLU Office! Silakan lengkapi nama profil dan upload foto tanda tangan Anda.');
+            }
 
             return redirect()->intended(route('office.home'));
         } catch (IdentityProviderException $exception) {

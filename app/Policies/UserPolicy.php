@@ -18,7 +18,7 @@ class UserPolicy
 
     public function update(User $actor, User $subject): bool
     {
-        return ! $actor->is($subject) && $actor->hasPermissionTo('users.manage');
+        return $actor->is($subject) || $actor->hasPermissionTo('users.manage');
     }
 
     public function assignRoles(User $actor, User $subject): bool

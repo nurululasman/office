@@ -77,6 +77,10 @@ class UserController extends Controller
             $audit->record('authorization.user_access.updated', actor: $actor, subject: $user, before: $before, after: $after, request: $request);
         });
 
-        return redirect()->route('users.index')->with('status', 'Data user berhasil diperbarui.');
+        $redirectRoute = $actor->can('viewAny', User::class)
+            ? route('users.index')
+            : route('office.home');
+
+        return redirect()->to($redirectRoute)->with('status', 'Data user berhasil diperbarui.');
     }
 }

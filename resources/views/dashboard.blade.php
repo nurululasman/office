@@ -15,6 +15,22 @@
     </div>
     <div class="page-body">
         <div class="container-xl">
+            @if(!auth()->user()->signature_path)
+                <div class="alert alert-warning alert-dismissible mb-4" role="alert">
+                    <div class="d-flex">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+                        </div>
+                        <div class="flex-fill">
+                            <h4 class="alert-title">Tanda Tangan Belum Diunggah</h4>
+                            <div class="text-secondary">Anda belum mengunggah foto tanda tangan. Tanda tangan diperlukan saat membuat atau menyetujui dokumen di JBLU Office.</div>
+                            <div class="mt-2">
+                                <a href="{{ route('users.edit', auth()->user()) }}" class="btn btn-warning btn-sm">Lengkapi Profil &amp; Tanda Tangan</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
             <div class="row row-deck row-cards">
                 @if($activeUsers !== null)
                     <div class="col-sm-6 col-lg-4"><div class="card"><div class="card-body"><div class="text-secondary">User aktif</div><div class="h1 mb-0">{{ $activeUsers }}</div></div></div></div>

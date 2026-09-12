@@ -19,6 +19,8 @@
                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
                     <div class="dropdown-item-text text-secondary">{{ auth()->user()->email }}</div>
                     <div class="dropdown-divider"></div>
+                    <a href="{{ route('users.edit', auth()->user()) }}" class="dropdown-item">Profil &amp; Tanda Tangan</a>
+                    <div class="dropdown-divider"></div>
                     <form method="POST" action="{{ route('auth.logout') }}">
                         @csrf
                         <button type="submit" class="dropdown-item">Keluar</button>

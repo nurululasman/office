@@ -174,6 +174,62 @@ class AccessManagementUiTest extends TestCase
         Storage::disk('public')->assertExists(str_replace('/storage/', '', $admin->signature_path));
     }
 
+    public function test_basic_user_can_edit_own_profile_and_is_redirected_to_office_home(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create(['name' => 'Regular Employee']);
+        $user->assignRole('office-user');
+
+        $this->actingAs($user)->withSession($this->validSsoSession())
+            ->get(route('users.edit', $user))
+            ->assertOk()
+            ->assertSee('Profil & Tanda Tangan Saya')
+            ->assertDontSee('Akses &amp; Role');
+
+        $payload = [
+            'name' => 'Regular Employee Updated',
+            'signature' => UploadedFile::fake()->image('signature.png', 100, 50),
+        ];
+
+        $this->actingAs($user)->withSession($this->validSsoSession())
+            ->put(route('users.update', $user), $payload)
+            ->assertRedirect(route('office.home'));
+
+        $user->refresh();
+        $this->assertSame('Regular Employee Updated', $user->name);
+        $this->assertNotNull($user->signature_path);
+        Storage::disk('public')->assertExists(str_replace('/storage/', '', $user->signature_path));
+    }
+
+    public function test_basic_user_cannot_edit_other_user_and_cannot_escalate_own_role(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole('office-user');
+        $otherUser = User::factory()->create();
+        $otherUser->assignRole('office-user');
+        $adminRole = Role::query()->where('slug', 'system-admin')->sole();
+
+        // Cannot view other user's edit page
+        $this->actingAs($user)->withSession($this->validSsoSession())
+            ->get(route('users.edit', $otherUser))
+            ->assertForbidden();
+
+        // Cannot update other user's profile
+        $this->actingAs($user)->withSession($this->validSsoSession())
+            ->put(route('users.update', $otherUser), ['name' => 'Hacked Name'])
+            ->assertForbidden();
+
+        // Cannot change own roles
+        $this->actingAs($user)->withSession($this->validSsoSession())
+            ->put(route('users.update', $user), [
+                'name' => 'Attempt Admin',
+                'roles' => [$adminRole->id],
+            ])
+            ->assertForbidden();
+
+        $this->assertFalse($user->fresh()->hasRole('system-admin'));
+    }
+
     /** @return array<string, array<string, int|string|null>> */
     private function validSsoSession(): array
     {
