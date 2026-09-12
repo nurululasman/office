@@ -41,6 +41,7 @@ class CompanyProfileRequest extends FormRequest
             'bank_information' => ['nullable', 'string', 'max:10000'],
             'primary_color' => ['nullable', 'regex:/^#[0-9A-F]{6}$/'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
+            'stamp' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
             'is_active' => ['required', 'boolean'],
         ];
     }
@@ -74,7 +75,7 @@ class CompanyProfileRequest extends FormRequest
     /** @return array<string, mixed> */
     public function profileData(): array
     {
-        $data = $this->safe()->except(['address_lines_text', 'logo']);
+        $data = $this->safe()->except(['address_lines_text', 'logo', 'stamp']);
         $data['address_lines'] = $this->addressLines();
 
         return $data;

@@ -65,18 +65,34 @@
             </div>
 
             <div class="col-lg-4">
-                <div class="card">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h3 class="card-title">Logo Perusahaan</h3>
+                    </div>
                     <div class="card-body text-center">
                         @if($profile->logo_path)
                             <img src="{{ $profile->logo_path }}" alt="Logo {{ $profile->display_name }}" style="max-width: 100%; max-height: 160px">
                         @else
-                            <div class="text-secondary py-5">Logo belum tersedia</div>
+                            <div class="text-secondary py-4">Logo belum tersedia</div>
                         @endif
 
                         @if($profile->primary_color)
                             <div class="mt-3">
                                 <span class="badge" style="background: {{ $profile->primary_color }}">{{ $profile->primary_color }}</span>
                             </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Stamp / Cap Perusahaan</h3>
+                    </div>
+                    <div class="card-body text-center">
+                        @if($profile->stamp_path)
+                            <img src="{{ $profile->stamp_path }}" alt="Stamp {{ $profile->display_name }}" style="max-width: 100%; max-height: 160px">
+                        @else
+                            <div class="text-secondary py-4">Stamp belum tersedia</div>
                         @endif
                     </div>
                 </div>

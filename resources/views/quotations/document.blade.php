@@ -51,7 +51,7 @@
         .terms { margin: 0 0 4mm; padding-left: 7mm; }
         .signatures { display: flex; gap: 30mm; margin-top: 4mm; break-inside: avoid; page-break-inside: avoid; }
         .signatures > div { flex: 1 1 0; }
-        .signature-space { height: 18mm; }
+        .signature-space { height: 28mm; }
         .signature-name { font-weight: 700; }
         .document-footer { position: absolute; right: 18mm; bottom: 10mm; left: 18mm; color: var(--muted); font-size: 8pt; text-align: center; }
         @media print {

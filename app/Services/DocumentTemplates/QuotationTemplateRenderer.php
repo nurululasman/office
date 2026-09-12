@@ -20,8 +20,14 @@ final class QuotationTemplateRenderer
         bool $isDraft = true,
         ?string $logoSource = null,
         bool $requireActivationContract = true,
+        ?string $stampSource = null,
+        ?string $signatureSource = null,
+        ?bool $showSenderSignatureAndStamp = null,
     ): string {
-        $quotation->loadMissing(['document', 'terms']);
+        $quotation->loadMissing(['document', 'terms', 'sender', 'creator']);
+        $showSenderSignatureAndStamp ??= $quotation->isSelfSender()
+            || $quotation->status === 'complete'
+            || $quotation->approved_at !== null;
         $snapshot = $quotation->template_snapshot;
         if (! is_array($snapshot) || ! is_string($snapshot['content_html'] ?? null)) {
             throw new RuntimeException('Quotation belum memiliki snapshot template yang valid.');
@@ -66,7 +72,17 @@ final class QuotationTemplateRenderer
         }
 
         $scalar = $this->scalarValues($quotation, $snapshot, $isDraft);
-        $structural = $this->structuralValues($quotation, $snapshot, $isDraft, $logoSource, $sanitizedItems, $sanitizedTerms);
+        $structural = $this->structuralValues(
+            $quotation,
+            $snapshot,
+            $isDraft,
+            $logoSource,
+            $sanitizedItems,
+            $sanitizedTerms,
+            $stampSource,
+            $signatureSource,
+            $showSenderSignatureAndStamp,
+        );
 
         $rendered = $sanitizedTemplate;
         for ($pass = 0; $pass < 5; $pass++) {
@@ -148,6 +164,9 @@ final class QuotationTemplateRenderer
         ?string $logoSource,
         string $itemHtml,
         string $termsHtml,
+        ?string $stampSource = null,
+        ?string $signatureSource = null,
+        bool $showSenderSignatureAndStamp = true,
     ): array {
         $company = is_array($snapshot['company_profile'] ?? null) ? $snapshot['company_profile'] : [];
 
@@ -160,6 +179,9 @@ final class QuotationTemplateRenderer
             'quotation_terms' => $termsHtml,
             'signature_block' => view('quotation-templates.components.signature', [
                 'quotation' => $quotation,
+                'stampSource' => $stampSource,
+                'signatureSource' => $signatureSource,
+                'showSenderSignatureAndStamp' => $showSenderSignatureAndStamp,
             ])->render(),
             'draft_watermark' => view('quotation-templates.components.draft-watermark', [
                 'isDraft' => $isDraft,

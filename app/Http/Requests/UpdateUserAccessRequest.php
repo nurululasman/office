@@ -13,17 +13,48 @@ class UpdateUserAccessRequest extends FormRequest
     {
         $user = $this->route('user');
 
-        return $user instanceof User
-            && $this->user()?->can('update', $user) === true
-            && $this->user()?->can('assignRoles', $user) === true;
+        if (! ($user instanceof User)) {
+            return false;
+        }
+
+        $actor = $this->user();
+        if (! $actor) {
+            return false;
+        }
+
+        if ($actor->is($user) && ($this->has('roles') || $this->has('is_active'))) {
+            return false;
+        }
+
+        if ($actor->is($user)) {
+            return $actor->hasPermissionTo('users.manage') || $actor->hasPermissionTo('users.read');
+        }
+
+        if ($this->has('roles') && ! $actor->can('assignRoles', $user)) {
+            return false;
+        }
+
+        return $actor->can('update', $user);
     }
 
     public function rules(): array
     {
         return [
-            'is_active' => ['required', 'boolean'],
-            'roles' => ['present', 'array'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'signature' => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
+            'is_active' => ['sometimes', 'required', 'boolean'],
+            'roles' => ['sometimes', 'array'],
             'roles.*' => [Rule::exists(Role::class, 'id')],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('name')) {
+            $this->merge(['name' => trim((string) $this->input('name'))]);
+        }
+        if ($this->has('is_active')) {
+            $this->merge(['is_active' => $this->boolean('is_active')]);
+        }
     }
 }

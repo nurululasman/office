@@ -15,7 +15,7 @@ return [
 
     'queues' => [
         'default' => env('DB_QUEUE', 'default'),
-        'pdf_connection' => env('PDF_QUEUE_CONNECTION', 'database'),
+        'pdf_connection' => env('PDF_QUEUE_CONNECTION', env('QUEUE_CONNECTION', 'database')),
         'pdf' => env('PDF_QUEUE', 'pdf'),
     ],
 ];

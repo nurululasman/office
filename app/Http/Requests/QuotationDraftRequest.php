@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\DocumentTemplate;
 use App\Models\Quotation;
+use App\Models\User;
 use App\Services\DocumentTemplates\DocumentTemplateHtmlSanitizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -39,6 +40,7 @@ class QuotationDraftRequest extends FormRequest
             'customer_address' => ['nullable', 'string', 'max:5000'],
             'attention_name' => ['nullable', 'string', 'max:255'],
             'attention_role' => ['nullable', 'string', 'max:255'],
+            'sender_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('is_active', true)],
             'sender_name' => ['required', 'string', 'max:255'],
             'sender_title' => ['nullable', 'string', 'max:255'],
             'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
@@ -76,6 +78,22 @@ class QuotationDraftRequest extends FormRequest
 
         foreach ($fields as $field) {
             $normalized[$field] = is_string($this->input($field)) ? trim($this->input($field)) : $this->input($field);
+        }
+
+        $senderId = $this->input('sender_id');
+        if (! empty($senderId)) {
+            $normalized['sender_id'] = (int) $senderId;
+            if (empty($normalized['sender_name'])) {
+                $sender = User::query()->find($senderId);
+                if ($sender) {
+                    $normalized['sender_name'] = $sender->name;
+                }
+            }
+        } elseif ($this->user()) {
+            $normalized['sender_id'] = $this->user()->getKey();
+            if (empty($normalized['sender_name'])) {
+                $normalized['sender_name'] = $this->user()->name;
+            }
         }
 
         $normalized['currency'] = strtoupper(trim((string) $this->input('currency', 'IDR')));

@@ -21,7 +21,7 @@
 
     .template-preview-page .signatures { display: flex; gap: 30mm; margin-top: 4mm; }
     .template-preview-page .signatures > div { flex: 1 1 0; }
-    .template-preview-page .signature-space { height: 18mm; }
+    .template-preview-page .signature-space { height: 28mm; }
     .template-preview-page .signature-name { font-weight: 700; }
     .template-preview-page .company-logo { display: flex; min-height: 24mm; align-items: center; justify-content: flex-end; }
     .template-preview-page .company-logo img { width: 38mm; height: 32mm; object-fit: contain; }

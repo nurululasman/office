@@ -33,8 +33,27 @@
         <div class="col-md-6"><label class="form-label" for="customer_address">Alamat pelanggan</label><textarea class="form-control" id="customer_address" name="customer_address" required>{{ old('customer_address', $quotation->customer_address) }}</textarea></div>
         <div class="col-md-6"><label class="form-label" for="attention_name">Attention</label><input class="form-control" id="attention_name" name="attention_name" value="{{ old('attention_name', $quotation->attention_name) }}"></div>
         <div class="col-md-6"><label class="form-label" for="attention_role">Jabatan attention</label><input class="form-control" id="attention_role" name="attention_role" value="{{ old('attention_role', $quotation->attention_role) }}"></div>
-        <div class="col-md-6"><label class="form-label" for="sender_name">Pengirim</label><input class="form-control" id="sender_name" name="sender_name" value="{{ old('sender_name', $quotation->sender_name ?: auth()->user()->name) }}" required></div>
-        <div class="col-md-6"><label class="form-label" for="sender_title">Jabatan pengirim</label><input class="form-control" id="sender_title" name="sender_title" value="{{ old('sender_title', $quotation->sender_title) }}"></div>
+        <div class="col-md-6">
+            <label class="form-label" for="sender_id">Pengirim &amp; Penanda Tangan</label>
+            <select class="form-select" id="sender_id" name="sender_id" required>
+                @foreach($senders as $userOption)
+                    <option value="{{ $userOption->id }}" 
+                        data-name="{{ $userOption->name }}" 
+                        @selected((int) old('sender_id', $quotation->sender_id ?: ($quotation->created_by ?: auth()->id())) === (int) $userOption->id)>
+                        {{ $userOption->name }} ({{ $userOption->username ?: $userOption->email }}){{ $userOption->id === auth()->id() ? ' — (Diri sendiri)' : '' }}
+                    </option>
+                @endforeach
+            </select>
+            <div id="sender-notice" class="form-hint mt-1"></div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="sender_name">Nama pada Dokumen</label>
+            <input class="form-control" id="sender_name" name="sender_name" value="{{ old('sender_name', $quotation->sender_name ?: auth()->user()->name) }}" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="sender_title">Jabatan pengirim</label>
+            <input class="form-control" id="sender_title" name="sender_title" value="{{ old('sender_title', $quotation->sender_title) }}">
+        </div>
         <div class="col-md-6"><label class="form-label" for="intro_text">Pengantar</label><textarea class="form-control" id="intro_text" name="intro_text">{{ old('intro_text', $quotation->intro_text ?? $templates->firstWhere('id', $selected)?->default_intro_text) }}</textarea></div>
         <div class="col-md-6"><label class="form-label" for="closing_text">Penutup</label><textarea class="form-control" id="closing_text" name="closing_text">{{ old('closing_text', $quotation->closing_text ?? $templates->firstWhere('id', $selected)?->default_closing_text) }}</textarea></div>
     </div></div></div>
@@ -64,6 +83,42 @@
         if (termsEditor) termsEditor.setContent('');
         else document.getElementById('terms_html').value = '';
     });
+
+    const currentUserId = {{ auth()->id() }};
+    const senderSelect = document.getElementById('sender_id');
+    const senderNameInput = document.getElementById('sender_name');
+    const senderNotice = document.getElementById('sender-notice');
+
+    function updateSenderNotice() {
+        if (!senderSelect) return;
+        const selectedOption = senderSelect.options[senderSelect.selectedIndex];
+        const selectedId = parseInt(senderSelect.value, 10);
+        if (selectedOption && senderNameInput && !senderNameInput.dataset.manuallyEdited) {
+            senderNameInput.value = selectedOption.dataset.name || '';
+        }
+        if (senderNotice) {
+            if (selectedId === currentUserId) {
+                senderNotice.className = 'form-hint text-success mt-1';
+                senderNotice.innerHTML = '<span class="badge bg-success-lt me-1">Otomatis</span> Pengirim adalah diri sendiri. Stamp perusahaan dan tanda tangan Anda otomatis terisi.';
+            } else {
+                senderNotice.className = 'form-hint text-warning mt-1';
+                senderNotice.innerHTML = '<span class="badge bg-warning-lt me-1">Perlu Approval</span> Pengirim berbeda dengan Anda. Dokumen memerlukan approval dari penandatangan sebelum diterbitkan.';
+            }
+        }
+    }
+
+    if (senderSelect) {
+        senderSelect.addEventListener('change', () => {
+            if (senderNameInput) delete senderNameInput.dataset.manuallyEdited;
+            updateSenderNotice();
+        });
+        if (senderNameInput) {
+            senderNameInput.addEventListener('input', () => {
+                senderNameInput.dataset.manuallyEdited = 'true';
+            });
+        }
+        updateSenderNotice();
+    }
 })()
 </script>
 @endpush

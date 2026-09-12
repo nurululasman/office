@@ -98,13 +98,19 @@ final class JbluSsoIdentityProvider implements IdentityProvider
             }
         }
 
+        $ssoUsername = trim($user['username']);
+        $ssoName = isset($user['name']) && is_string($user['name']) && trim($user['name']) !== ''
+            ? trim($user['name'])
+            : $ssoUsername;
+
         return new SsoProfile(
             issuer: (string) config('sso.base_url'),
             subject: $user['id'],
             tenantId: $tenantId,
             email: mb_strtolower(trim($user['email'])),
-            name: trim($user['username']),
+            name: $ssoName,
             avatarUrl: isset($user['avatar_url']) && is_string($user['avatar_url']) ? $user['avatar_url'] : null,
+            username: $ssoUsername,
         );
     }
 

@@ -26,6 +26,8 @@ final class SsoUserProvisioner
                 throw new IdentityProviderException('Akun Office tidak aktif.');
             }
 
+            $isNew = $user === null;
+
             $user ??= new User([
                 'sso_issuer' => $profile->issuer,
                 'sso_subject' => $profile->subject,
@@ -33,12 +35,21 @@ final class SsoUserProvisioner
                 'is_active' => true,
             ]);
 
-            $user->forceFill([
-                'name' => $profile->name,
+            $attributes = [
                 'email' => $profile->email,
                 'avatar_url' => $profile->avatarUrl,
                 'last_login_at' => now(),
-            ])->save();
+            ];
+
+            if ($profile->username !== null && $profile->username !== '') {
+                $attributes['username'] = $profile->username;
+            }
+
+            if ($isNew || empty($user->name)) {
+                $attributes['name'] = $profile->name;
+            }
+
+            $user->forceFill($attributes)->save();
 
             $user->assignRole('office-user');
 

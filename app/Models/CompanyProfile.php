@@ -10,7 +10,7 @@ class CompanyProfile extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['company_code', 'legal_name', 'display_name', 'address_lines', 'city', 'postal_code', 'country', 'email', 'phone', 'website', 'tax_id', 'bank_information', 'logo_path', 'logo_sha256', 'primary_color', 'is_active'];
+    protected $fillable = ['company_code', 'legal_name', 'display_name', 'address_lines', 'city', 'postal_code', 'country', 'email', 'phone', 'website', 'tax_id', 'bank_information', 'logo_path', 'logo_sha256', 'stamp_path', 'stamp_sha256', 'primary_color', 'is_active'];
 
     protected function casts(): array
     {

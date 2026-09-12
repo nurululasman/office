@@ -224,7 +224,7 @@ Jika harga quotation perlu menjadi bagian kontrak terstruktur, tambahkan `contra
 - `id`, `company_code`, `legal_name`, `display_name`;
 - `address_lines` JSON, `city`, `postal_code`, `country`;
 - `email`, `phone`, `website`, `tax_id` nullable;
-- `logo_path`, `logo_sha256`, `primary_color`, `is_active`, timestamps.
+- `logo_path`, `logo_sha256`, `stamp_path`, `stamp_sha256`, `primary_color`, `is_active`, timestamps.
 
 Profil perusahaan menjadi sumber branding template. Asset logo JBLU yang digunakan saat ini adalah `public/static/jblu.png` (896x755 px; SHA-256 `CF7F4C45F4D23C345E35D17A02758D92CD644E2FFE222F23EFE60F025A14DBCC`). Logo bukan hasil crop scan, logo template UI, atau brand aplikasi lain. Data legal dan kontak tetap diverifikasi sebelum template production diaktifkan.
 

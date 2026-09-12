@@ -44,6 +44,10 @@ class QuotationPolicy
 
     public function completeDirect(User $user, Quotation $quotation): bool
     {
+        if (! $quotation->isSelfSender()) {
+            return false;
+        }
+
         return $user->hasPermissionTo('quotations.complete-direct')
             && ($quotation->created_by === $user->getKey() || $user->hasPermissionTo('quotations.update-any'));
     }
@@ -56,11 +60,23 @@ class QuotationPolicy
 
     public function approve(User $user, Quotation $quotation): bool
     {
+        if ($quotation->sender_id !== null
+            && (int) $quotation->sender_id === (int) $user->getKey()
+            && (int) $quotation->created_by !== (int) $user->getKey()) {
+            return true;
+        }
+
         return $user->hasPermissionTo('quotations.approve');
     }
 
     public function reject(User $user, Quotation $quotation): bool
     {
+        if ($quotation->sender_id !== null
+            && (int) $quotation->sender_id === (int) $user->getKey()
+            && (int) $quotation->created_by !== (int) $user->getKey()) {
+            return true;
+        }
+
         return $user->hasPermissionTo('quotations.reject');
     }
 

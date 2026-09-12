@@ -11,5 +11,6 @@ final readonly class SsoProfile
         public string $email,
         public string $name,
         public ?string $avatarUrl,
+        public ?string $username = null,
     ) {}
 }

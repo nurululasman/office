@@ -6,6 +6,7 @@ use App\Exceptions\QuotationWorkflowException;
 use App\Http\Requests\QuotationDraftRequest;
 use App\Models\DocumentTemplate;
 use App\Models\Quotation;
+use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\DocumentTemplates\DocumentTemplateHtmlSanitizer;
 use App\Services\Quotations\QuotationDocumentRenderer;
@@ -49,6 +50,7 @@ class QuotationController extends Controller
             'quotation' => new Quotation(['quotation_date' => now(config('office.business_timezone'))->toDateString(), 'currency' => 'IDR']),
             'templates' => $this->templates(),
             'selectedTemplateId' => null,
+            'senders' => User::query()->where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
@@ -73,7 +75,7 @@ class QuotationController extends Controller
         Gate::authorize('view', $quotation);
 
         return view('quotations.show', [
-            'quotation' => $quotation->load(['creator', 'document.voider', 'terms', 'submitter', 'approver', 'rejecter', 'completer', 'generatedFiles']),
+            'quotation' => $quotation->load(['creator', 'sender', 'document.voider', 'terms', 'submitter', 'approver', 'rejecter', 'completer', 'generatedFiles']),
             'audits' => $quotation->audits()->with('actor')->oldest('occurred_at')->get(),
         ]);
     }
@@ -87,10 +89,19 @@ class QuotationController extends Controller
             $templates->push($quotation->template);
         }
 
+        $senders = User::query()->where('is_active', true)->orderBy('name')->get();
+        if ($quotation->sender_id && ! $senders->contains('id', $quotation->sender_id)) {
+            $sender = User::find($quotation->sender_id);
+            if ($sender) {
+                $senders->push($sender);
+            }
+        }
+
         return view('quotations.form', [
             'quotation' => $quotation->load(['terms']),
             'templates' => $templates,
             'selectedTemplateId' => $quotation->template_id,
+            'senders' => $senders,
         ]);
     }
 
@@ -184,18 +195,29 @@ class QuotationController extends Controller
         $keepsTemplate = $quotation->exists && $quotation->template_id === $template->getKey();
         $contentHtml = app(DocumentTemplateHtmlSanitizer::class)->sanitize((string) $data['content_html']);
         $termsHtml = app(DocumentTemplateHtmlSanitizer::class)->sanitize((string) $data['terms_html']);
-        $quotation->fill(collect($data)->except(['content_html', 'terms_html', 'lock_version', 'submit_action'])->all() + [
-            'created_by' => $creatorId,
-            'approval_mode' => $quotation->exists ? $quotation->approval_mode : $this->approvalMode(),
-            'template_snapshot' => $keepsTemplate ? $quotation->template_snapshot : $template->loadMissing('companyProfile')->snapshot(),
-            'content_html' => $contentHtml,
-            'content_sha256' => hash('sha256', $contentHtml),
-            'terms_html' => $termsHtml,
-            'terms_sha256' => hash('sha256', $termsHtml),
-            'template_content_sha256' => $keepsTemplate ? $quotation->template_content_sha256 : $template->content_sha256,
-            'placeholder_contract_version' => DocumentTemplate::PLACEHOLDER_CONTRACT_VERSION,
-        ])->save();
 
+        $senderId = ! empty($data['sender_id']) ? (int) $data['sender_id'] : $creatorId;
+        $isSelfSender = $senderId === $creatorId;
+        $defaultApprovalMode = $this->approvalMode();
+        $approvalMode = ! $isSelfSender ? 'maker_checker' : $defaultApprovalMode;
+
+        $fillData = array_merge(
+            collect($data)->except(['content_html', 'terms_html', 'lock_version', 'submit_action'])->all(),
+            [
+                'created_by' => $creatorId,
+                'sender_id' => $senderId,
+                'approval_mode' => $approvalMode,
+                'template_snapshot' => $keepsTemplate ? $quotation->template_snapshot : $template->loadMissing('companyProfile')->snapshot(),
+                'content_html' => $contentHtml,
+                'content_sha256' => hash('sha256', $contentHtml),
+                'terms_html' => $termsHtml,
+                'terms_sha256' => hash('sha256', $termsHtml),
+                'template_content_sha256' => $keepsTemplate ? $quotation->template_content_sha256 : $template->content_sha256,
+                'placeholder_contract_version' => DocumentTemplate::PLACEHOLDER_CONTRACT_VERSION,
+            ]
+        );
+
+        $quotation->fill($fillData)->save();
     }
 
     private function approvalMode(): string

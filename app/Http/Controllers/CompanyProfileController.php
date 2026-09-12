@@ -6,6 +6,7 @@ use App\Http\Requests\CompanyProfileRequest;
 use App\Models\CompanyProfile;
 use App\Services\Audit\AuditLogger;
 use App\Services\CompanyProfiles\CompanyLogoStorage;
+use App\Services\CompanyProfiles\CompanyStampStorage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,12 +50,16 @@ class CompanyProfileController extends Controller
     public function store(
         CompanyProfileRequest $request,
         CompanyLogoStorage $logos,
+        CompanyStampStorage $stamps,
         AuditLogger $audit,
     ): RedirectResponse {
-        $profile = DB::transaction(function () use ($request, $logos, $audit): CompanyProfile {
+        $profile = DB::transaction(function () use ($request, $logos, $stamps, $audit): CompanyProfile {
             $data = $request->profileData();
             if ($request->hasFile('logo')) {
                 $data += $logos->store($request->file('logo'));
+            }
+            if ($request->hasFile('stamp')) {
+                $data += $stamps->store($request->file('stamp'));
             }
             $profile = CompanyProfile::query()->create($data);
             $audit->record('company_profile.created', $request->user(), $profile, after: $this->auditState($profile), request: $request);
@@ -86,14 +91,18 @@ class CompanyProfileController extends Controller
         CompanyProfileRequest $request,
         CompanyProfile $companyProfile,
         CompanyLogoStorage $logos,
+        CompanyStampStorage $stamps,
         AuditLogger $audit,
     ): RedirectResponse {
-        DB::transaction(function () use ($request, $companyProfile, $logos, $audit): void {
+        DB::transaction(function () use ($request, $companyProfile, $logos, $stamps, $audit): void {
             $locked = CompanyProfile::query()->lockForUpdate()->findOrFail($companyProfile->getKey());
             $before = $this->auditState($locked);
             $data = $request->profileData();
             if ($request->hasFile('logo')) {
                 $data += $logos->store($request->file('logo'));
+            }
+            if ($request->hasFile('stamp')) {
+                $data += $stamps->store($request->file('stamp'));
             }
             $locked->update($data);
             $audit->record('company_profile.updated', $request->user(), $locked, before: $before, after: $this->auditState($locked), request: $request);
@@ -123,7 +132,7 @@ class CompanyProfileController extends Controller
         return $profile->only([
             'company_code', 'legal_name', 'display_name', 'address_lines', 'city',
             'postal_code', 'country', 'email', 'phone', 'website', 'tax_id', 'bank_information',
-            'logo_path', 'logo_sha256', 'primary_color', 'is_active',
+            'logo_path', 'logo_sha256', 'stamp_path', 'stamp_sha256', 'primary_color', 'is_active',
         ]);
     }
 }

@@ -130,6 +130,8 @@ HTML;
                 'bank_information' => $profile->bank_information,
                 'logo_path' => $profile->logo_path,
                 'logo_sha256' => $profile->logo_sha256,
+                'stamp_path' => $profile->stamp_path,
+                'stamp_sha256' => $profile->stamp_sha256,
                 'primary_color' => $profile->primary_color,
             ] : null,
         ];

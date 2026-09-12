@@ -71,6 +71,20 @@ class Quotation extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function sender(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sender_id');
+    }
+
+    public function isSelfSender(): bool
+    {
+        if ($this->sender_id === null) {
+            return true;
+        }
+
+        return (int) $this->sender_id === (int) $this->created_by;
+    }
+
     public function template(): BelongsTo
     {
         return $this->belongsTo(DocumentTemplate::class);

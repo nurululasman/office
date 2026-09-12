@@ -6,26 +6,34 @@ use App\Models\CompanyProfile;
 use App\Models\DocumentTemplate;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CompanyProfileManagementTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected function setUp(): void
     {
         parent::setUp();
+        if (DB::getDriverName() === 'sqlite' && ! Schema::hasTable('company_profiles')) {
+            $this->artisan('migrate');
+        }
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_document_admin_can_create_view_update_and_upload_immutable_logo(): void
+    public function test_document_admin_can_create_view_update_and_upload_immutable_logo_and_stamp(): void
     {
         Storage::fake('public');
         $admin = $this->userWithRole('document-admin');
-        $payload = $this->payload() + ['logo' => UploadedFile::fake()->image('logo.png', 200, 100)];
+        $payload = $this->payload() + [
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 100),
+            'stamp' => UploadedFile::fake()->image('stamp.png', 150, 150),
+        ];
 
         $response = $this->as($admin)->post(route('company-profiles.store'), $payload);
 
@@ -35,11 +43,18 @@ class CompanyProfileManagementTest extends TestCase
         $this->assertSame('ID', $profile->country);
         $this->assertSame("Bank Information:\nAccount No. 123", $profile->bank_information);
         $this->assertMatchesRegularExpression('#^/storage/company-logos/[a-f0-9]{64}\.png$#', $profile->logo_path);
+        $this->assertMatchesRegularExpression('#^/storage/company-stamps/[a-f0-9]{64}\.png$#', $profile->stamp_path);
         Storage::disk('public')->assertExists(str_replace('/storage/', '', $profile->logo_path));
+        Storage::disk('public')->assertExists(str_replace('/storage/', '', $profile->stamp_path));
         $this->assertDatabaseHas('audit_logs', ['action' => 'company_profile.created', 'subject_id' => $profile->getKey()]);
 
         $this->as($admin)->get(route('company-profiles.show', $profile))
-            ->assertOk()->assertSee('PT Example Logistics')->assertSee($profile->logo_path, false);
+            ->assertOk()
+            ->assertSee('PT Example Logistics')
+            ->assertSee($profile->logo_path, false)
+            ->assertSee($profile->stamp_path, false);
+
+        $originalStampPath = $profile->stamp_path;
 
         $updated = $this->payload();
         $updated['display_name'] = 'Example Updated';
@@ -51,7 +66,17 @@ class CompanyProfileManagementTest extends TestCase
         $this->assertSame('Example Updated', $profile->display_name);
         $this->assertFalse($profile->is_active);
         $this->assertNotNull($profile->logo_path);
+        $this->assertSame($originalStampPath, $profile->stamp_path);
         $this->assertDatabaseHas('audit_logs', ['action' => 'company_profile.updated', 'subject_id' => $profile->getKey()]);
+
+        $withNewStamp = $this->payload() + ['stamp' => UploadedFile::fake()->image('new-stamp.jpg', 160, 160)];
+        $this->as($admin)->put(route('company-profiles.update', $profile), $withNewStamp)
+            ->assertRedirect(route('company-profiles.show', $profile));
+
+        $profile->refresh();
+        $this->assertMatchesRegularExpression('#^/storage/company-stamps/[a-f0-9]{64}\.jpg$#', $profile->stamp_path);
+        $this->assertNotSame($originalStampPath, $profile->stamp_path);
+        Storage::disk('public')->assertExists(str_replace('/storage/', '', $profile->stamp_path));
     }
 
     public function test_validation_normalizes_codes_and_rejects_duplicate_or_unsafe_branding_fields(): void
@@ -65,11 +90,12 @@ class CompanyProfileManagementTest extends TestCase
         $invalid['primary_color'] = '#GGGGGG';
         $invalid['address_lines_text'] = " \n ";
         $invalid['logo'] = UploadedFile::fake()->create('logo.svg', 10, 'image/svg+xml');
+        $invalid['stamp'] = UploadedFile::fake()->create('stamp.svg', 10, 'image/svg+xml');
 
         $this->as($admin)->post(route('company-profiles.store'), $invalid)
             ->assertSessionHasErrors([
                 'company_code', 'country', 'website', 'primary_color',
-                'address_lines_text', 'logo',
+                'address_lines_text', 'logo', 'stamp',
             ]);
 
         $duplicate = $this->payload();
