@@ -75,13 +75,10 @@ class QuotationSenderApprovalWorkflowTest extends TestCase
         $this->assertSame('direct', $quotation->approval_mode);
         $this->assertSame('draft', $quotation->status);
 
-        // Preview should already display company stamp and user signature
+        // Draft preview must NOT display user signature because it has not been approved yet
         $renderer = app(QuotationDocumentRenderer::class);
         $draftHtml = $renderer->content($quotation, true);
-        $this->assertStringContainsString('class="company-stamp-img"', $draftHtml);
-        $this->assertStringContainsString('class="user-signature-img"', $draftHtml);
-        $this->assertStringContainsString(base64_encode($stampBytes), $draftHtml);
-        $this->assertStringContainsString(base64_encode($signatureBytes), $draftHtml);
+        $this->assertStringNotContainsString('class="user-signature-img"', $draftHtml);
 
         // Direct completion is allowed
         $this->assertTrue($maker->can('completeDirect', $quotation));
@@ -92,9 +89,12 @@ class QuotationSenderApprovalWorkflowTest extends TestCase
         $this->assertSame('complete', $quotation->status);
         $this->assertNotNull($quotation->document_id);
 
+        // Once approved and complete, signature and stamp ARE displayed
         $completedHtml = $renderer->content($quotation, false);
         $this->assertStringContainsString('class="company-stamp-img"', $completedHtml);
         $this->assertStringContainsString('class="user-signature-img"', $completedHtml);
+        $this->assertStringContainsString(base64_encode($stampBytes), $completedHtml);
+        $this->assertStringContainsString(base64_encode($signatureBytes), $completedHtml);
     }
 
     public function test_different_sender_forces_maker_checker_and_requires_sender_approval(): void

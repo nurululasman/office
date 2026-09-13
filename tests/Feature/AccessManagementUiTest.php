@@ -95,7 +95,7 @@ class AccessManagementUiTest extends TestCase
         $this->actingAs($basic)->withSession($this->validSsoSession())->get(route('permissions.index'))->assertForbidden();
     }
 
-    public function test_admin_can_update_user_name_and_upload_signature(): void
+    public function test_admin_can_update_user_name_and_access_but_signature_is_restricted_to_owner(): void
     {
         Storage::fake('public');
         $admin = User::factory()->create();
@@ -103,10 +103,19 @@ class AccessManagementUiTest extends TestCase
         $user = User::factory()->create(['name' => 'Original Name', 'username' => 'sso_jblu_user']);
         $user->assignRole('office-user');
 
+        // User uploads their own signature first
+        $signatureBytes = UploadedFile::fake()->image('ttd.png', 150, 75);
+        $this->actingAs($user)->withSession($this->validSsoSession())
+            ->put(route('users.update', $user), ['signature' => $signatureBytes])
+            ->assertRedirect(route('office.home'));
+
+        $user->refresh();
+        $this->assertNotNull($user->signature_path);
+
+        // Admin updates user details (name, roles, status)
         $payload = [
             'name' => 'Updated User Name',
             'username' => 'hacked_username',
-            'signature' => UploadedFile::fake()->image('ttd.png', 150, 75),
             'is_active' => true,
             'roles' => $user->roles()->pluck('id')->all(),
         ];
@@ -117,29 +126,41 @@ class AccessManagementUiTest extends TestCase
 
         $user->refresh();
         $this->assertSame('Updated User Name', $user->name);
-        $this->assertSame('sso_jblu_user', $user->username); // Username cannot be modified!
-        $this->assertMatchesRegularExpression('#^/storage/user-signatures/[a-f0-9]{64}\.png$#', $user->signature_path);
-        Storage::disk('public')->assertExists(str_replace('/storage/', '', $user->signature_path));
+        $this->assertSame('sso_jblu_user', $user->username);
 
+        // Signature must NOT be displayed in user list (index)
         $this->actingAs($admin)->withSession($this->validSsoSession())
             ->get(route('users.index'))
             ->assertOk()
             ->assertSee('Updated User Name')
             ->assertSee('sso_jblu_user')
-            ->assertSee($user->signature_path, false);
+            ->assertDontSee($user->signature_path, false);
 
+        // Admin viewing another user's detail/edit CANNOT see the signature
         $this->actingAs($admin)->withSession($this->validSsoSession())
             ->get(route('users.edit', $user))
             ->assertOk()
             ->assertSee('Updated User Name')
             ->assertSee('sso_jblu_user')
+            ->assertDontSee($user->signature_path, false);
+
+        // Only the owner user can see their signature in edit/detail
+        $this->actingAs($user)->withSession($this->validSsoSession())
+            ->get(route('users.edit', $user))
+            ->assertOk()
+            ->assertSee('Updated User Name')
             ->assertSee($user->signature_path, false);
+
+        // Admin cannot upload or change another user's signature
+        $this->actingAs($admin)->withSession($this->validSsoSession())
+            ->put(route('users.update', $user), [
+                'signature' => UploadedFile::fake()->image('admin_fake.png', 100, 50),
+            ])
+            ->assertForbidden();
     }
 
     public function test_validation_rejects_invalid_signature_format(): void
     {
-        $admin = User::factory()->create();
-        $admin->assignRole('system-admin');
         $user = User::factory()->create();
         $user->assignRole('office-user');
 
@@ -148,7 +169,7 @@ class AccessManagementUiTest extends TestCase
             'signature' => UploadedFile::fake()->create('signature.svg', 10, 'image/svg+xml'),
         ];
 
-        $this->actingAs($admin)->withSession($this->validSsoSession())
+        $this->actingAs($user)->withSession($this->validSsoSession())
             ->put(route('users.update', $user), $invalid)
             ->assertSessionHasErrors(['signature']);
     }

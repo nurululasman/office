@@ -25,8 +25,7 @@ final class QuotationTemplateRenderer
         ?bool $showSenderSignatureAndStamp = null,
     ): string {
         $quotation->loadMissing(['document', 'terms', 'sender', 'creator']);
-        $showSenderSignatureAndStamp ??= $quotation->isSelfSender()
-            || $quotation->status === 'complete'
+        $showSenderSignatureAndStamp ??= in_array($quotation->status, ['complete', 'void'], true)
             || $quotation->approved_at !== null;
         $snapshot = $quotation->template_snapshot;
         if (! is_array($snapshot) || ! is_string($snapshot['content_html'] ?? null)) {
@@ -193,5 +192,4 @@ final class QuotationTemplateRenderer
     {
         return (new HtmlString(nl2br(e($value), false)))->toHtml();
     }
-
 }

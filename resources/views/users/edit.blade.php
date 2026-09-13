@@ -15,7 +15,7 @@
                     @csrf
                     @method('PUT')
                     <div class="card-header">
-                        <h3 class="card-title">Profil & Tanda Tangan</h3>
+                        <h3 class="card-title">{{ auth()->user()->is($managedUser) ? 'Profil & Tanda Tangan' : 'Profil' }}</h3>
                     </div>
                     <div class="card-body">
                         @if(auth()->user()->is($managedUser) && !$managedUser->signature_path)
@@ -39,17 +39,19 @@
                                 <input class="form-control" id="email" value="{{ $managedUser->email }}" disabled readonly>
                                 <div class="form-hint">Email dikelola melalui penyedia SSO.</div>
                             </div>
-                            <div class="col-12">
-                                <label class="form-label" for="signature">Foto Tanda Tangan (PNG/JPEG)</label>
-                                <input class="form-control" type="file" id="signature" name="signature" accept="image/png,image/jpeg">
-                                <div class="form-hint">Maksimum 2 MB. Disarankan format PNG dengan latar belakang transparan.</div>
-                                @if($managedUser->signature_path)
-                                    <div class="mt-3 p-3 bg-light border rounded">
-                                        <div class="form-label small text-secondary mb-2">Tanda tangan saat ini:</div>
-                                        <img src="{{ $managedUser->signature_path }}" alt="Tanda tangan {{ $managedUser->name }}" style="max-height: 100px; max-width: 250px; object-fit: contain;">
-                                    </div>
-                                @endif
-                            </div>
+                            @if(auth()->user()->is($managedUser))
+                                <div class="col-12">
+                                    <label class="form-label" for="signature">Foto Tanda Tangan (PNG/JPEG)</label>
+                                    <input class="form-control" type="file" id="signature" name="signature" accept="image/png,image/jpeg">
+                                    <div class="form-hint">Maksimum 2 MB. Disarankan format PNG dengan latar belakang transparan.</div>
+                                    @if($managedUser->signature_path)
+                                        <div class="mt-3 p-3 bg-light border rounded">
+                                            <div class="form-label small text-secondary mb-2">Tanda tangan saat ini:</div>
+                                            <img src="{{ $managedUser->signature_path }}" alt="Tanda tangan {{ $managedUser->name }}" style="max-height: 100px; max-width: 250px; object-fit: contain;">
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
 

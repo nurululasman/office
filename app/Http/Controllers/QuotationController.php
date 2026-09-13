@@ -109,10 +109,12 @@ class QuotationController extends Controller
     {
         Gate::authorize('preview', $quotation);
 
+        $isDraft = ! in_array($quotation->status, ['complete', 'void'], true);
+
         return view('quotations.document', [
             'quotation' => $quotation,
-            'renderedHtml' => $renderer->content($quotation, true),
-            'isDraft' => true,
+            'renderedHtml' => $renderer->content($quotation, $isDraft),
+            'isDraft' => $isDraft,
             'browserPreview' => true,
         ]);
     }

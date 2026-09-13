@@ -19,12 +19,12 @@ final class QuotationDocumentRenderer
         bool $isDraft,
         bool $requireActivationContract = true,
     ): string {
-        $showSenderSignatureAndStamp = $quotation->isSelfSender()
-            || $quotation->status === 'complete'
+        $isApproved = in_array($quotation->status, ['complete', 'void'], true)
             || $quotation->approved_at !== null;
+        $showSenderSignatureAndStamp = $isApproved;
 
         $stampSource = $showSenderSignatureAndStamp ? $this->stampDataUri($quotation) : null;
-        $signatureSource = $showSenderSignatureAndStamp ? $this->signatureDataUri($quotation) : null;
+        $signatureSource = $isApproved ? $this->signatureDataUri($quotation) : null;
 
         return $this->templateRenderer->render(
             $quotation,

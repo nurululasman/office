@@ -52,7 +52,7 @@ class UserController extends Controller
             if (isset($validated['name']) && $validated['name'] !== '') {
                 $data['name'] = $validated['name'];
             }
-            if ($request->hasFile('signature')) {
+            if ($request->hasFile('signature') && $actor->is($user)) {
                 $data += $signatures->store($request->file('signature'));
             }
             if (isset($validated['is_active']) && ! $actor->is($user)) {

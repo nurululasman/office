@@ -152,32 +152,32 @@ Catat lokasi binary (biasanya `/usr/bin/chromium-browser` atau `/usr/bin/chromiu
 
 ## 7. Langkah 6: Clone Aplikasi & Setup Hak Akses Direktori
 
-Buat direktori kerja di `/var/www/office`:
+Buat direktori kerja di `/var/www/prod/office`:
 
 ```bash
-sudo mkdir -p /var/www/office
-sudo chown -R $USER:$USER /var/www/office
+sudo mkdir -p /var/www/prod/office
+sudo chown -R $USER:$USER /var/www/prod/office
 ```
 
 Clone kode sumber dari repository Git:
 
 ```bash
-git clone <URL_GIT_REPOSITORY_ANDA> /var/www/office
-cd /var/www/office
+git clone <URL_GIT_REPOSITORY_ANDA> /var/www/prod/office
+cd /var/www/prod/office
 ```
 
 ### Konfigurasi Kepemilikan & Hak Akses
 Web server Nginx dan PHP-FPM berjalan sebagai user `www-data`. Berikan kepemilikan direktori `storage` dan `bootstrap/cache` ke `www-data`:
 
 ```bash
-sudo chown -R www-data:www-data /var/www/office/storage /var/www/office/bootstrap/cache
-sudo chmod -R 775 /var/www/office/storage /var/www/office/bootstrap/cache
+sudo chown -R www-data:www-data /var/www/prod/office/storage /var/www/prod/office/bootstrap/cache
+sudo chmod -R 775 /var/www/prod/office/storage /var/www/prod/office/bootstrap/cache
 
 # Buat direktori private documents dan temp jika belum ada
-sudo -u www-data mkdir -p /var/www/office/storage/app/private/documents
-sudo -u www-data mkdir -p /var/www/office/storage/app/private/tmp
-sudo -u www-data mkdir -p /var/www/office/storage/app/public/company-stamps
-sudo -u www-data mkdir -p /var/www/office/storage/app/public/user-signatures
+sudo -u www-data mkdir -p /var/www/prod/office/storage/app/private/documents
+sudo -u www-data mkdir -p /var/www/prod/office/storage/app/private/tmp
+sudo -u www-data mkdir -p /var/www/prod/office/storage/app/public/company-stamps
+sudo -u www-data mkdir -p /var/www/prod/office/storage/app/public/user-signatures
 ```
 
 ---
@@ -337,7 +337,7 @@ server {
     listen [::]:443 ssl http2;
     server_name office.domainanda.com;
 
-    root /var/www/office/public;
+    root /var/www/prod/office/public;
     index index.php index.html;
 
     # Batas ukuran upload foto stamp & tanda tangan
@@ -363,7 +363,7 @@ server {
 
     # Public storage files (stamps, signatures, logos)
     location /storage/ {
-        alias /var/www/office/storage/app/public/;
+        alias /var/www/prod/office/storage/app/public/;
         try_files $uri =404;
         access_log off;
         log_not_found off;
@@ -423,7 +423,7 @@ Isi konfigurasi berikut:
 ```ini
 [program:office-worker-pdf]
 process_name=%(program_name)s_%(process_num)02d
-command=/usr/bin/php /var/www/office/artisan queue:work database --queue=pdf --tries=3 --timeout=150 --backoff=10
+command=/usr/bin/php /var/www/prod/office/artisan queue:work database --queue=pdf --tries=3 --timeout=150 --backoff=10
 autostart=true
 autorestart=true
 stopasgroup=true
@@ -436,7 +436,7 @@ stopwaitsecs=160
 
 [program:office-worker-default]
 process_name=%(program_name)s_%(process_num)02d
-command=/usr/bin/php /var/www/office/artisan queue:work database --queue=default --tries=3 --timeout=60
+command=/usr/bin/php /var/www/prod/office/artisan queue:work database --queue=default --tries=3 --timeout=60
 autostart=true
 autorestart=true
 stopasgroup=true
@@ -476,7 +476,7 @@ sudo crontab -u www-data -e
 
 Tambahkan baris berikut di bagian paling bawah:
 ```cron
-* * * * * cd /var/www/office && /usr/bin/php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/prod/office && /usr/bin/php artisan schedule:run >> /dev/null 2>&1
 ```
 
 ---
@@ -486,7 +486,7 @@ Tambahkan baris berikut di bagian paling bawah:
 Jalankan perintah cache untuk performa maksimal pada production:
 
 ```bash
-cd /var/www/office
+cd /var/www/prod/office
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -520,7 +520,7 @@ php artisan event:cache
 Saat ada rilis atau pembaruan kode di masa mendatang, ikuti urutan berikut untuk meminimalkan downtime:
 
 ```bash
-cd /var/www/office
+cd /var/www/prod/office
 
 # 1. Aktifkan maintenance mode dengan bypass secret
 MAINTENANCE_SECRET=$(openssl rand -hex 16)
@@ -573,22 +573,22 @@ php artisan office:smoke --url=https://office.domainanda.com
    ```
 4. Cek permission direktori penyimpanan temporary dan documents:
    ```bash
-   ls -la /var/www/office/storage/app/private/
+   ls -la /var/www/prod/office/storage/app/private/
    ```
 
 ### B. Foto Tanda Tangan atau Stamp Tidak Muncul di Tampilan
 1. Pastikan symbolic link public telah terbuat:
    ```bash
-   ls -l /var/www/office/public/storage
-   # Harus menunjuk ke /var/www/office/storage/app/public
+   ls -l /var/www/prod/office/public/storage
+   # Harus menunjuk ke /var/www/prod/office/storage/app/public
    ```
    Jika belum, jalankan `php artisan storage:link`.
-2. Pastikan file tersimpan di `/var/www/office/storage/app/public/user-signatures/` atau `company-stamps/` dan memiliki izin baca oleh `www-data`.
+2. Pastikan file tersimpan di `/var/www/prod/office/storage/app/public/user-signatures/` atau `company-stamps/` dan memiliki izin baca oleh `www-data`.
 
 ### C. Error 500 / Log Laravel
 Jika terjadi kendala pada aplikasi, periksa log harian Laravel:
 ```bash
-tail -n 100 -f /var/www/office/storage/logs/laravel-$(date +%Y-%m-%d).log
+tail -n 100 -f /var/www/prod/office/storage/logs/laravel-$(date +%Y-%m-%d).log
 ```
 
 ---

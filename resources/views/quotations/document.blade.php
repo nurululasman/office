@@ -64,7 +64,7 @@
 </head>
 <body>
 @if($browserPreview ?? false)
-    <div class="preview-toolbar">Preview draft - bukan dokumen resmi <button type="button" onclick="window.print()">Cetak preview</button></div>
+    <div class="preview-toolbar">{{ $isDraft ? 'Preview draft - bukan dokumen resmi' : 'Preview dokumen resmi' }} <button type="button" onclick="window.print()">Cetak preview</button></div>
 @endif
 <main class="quotation-page" data-testid="quotation-preview">
     <article class="quotation-content" data-template-rendered="true">{!! $renderedHtml !!}</article>

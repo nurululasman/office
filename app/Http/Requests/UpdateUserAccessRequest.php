@@ -30,6 +30,10 @@ class UpdateUserAccessRequest extends FormRequest
             return true;
         }
 
+        if ($this->hasFile('signature')) {
+            return false;
+        }
+
         if ($this->has('roles') && ! $actor->can('assignRoles', $user)) {
             return false;
         }
