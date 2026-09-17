@@ -83,16 +83,18 @@ class QuotationDraftRequest extends FormRequest
         $senderId = $this->input('sender_id');
         if (! empty($senderId)) {
             $normalized['sender_id'] = (int) $senderId;
-            if (empty($normalized['sender_name'])) {
-                $sender = User::query()->find($senderId);
-                if ($sender) {
-                    $normalized['sender_name'] = $sender->name;
-                }
+            $sender = User::query()->find($senderId);
+            if ($sender && ! empty($sender->name)) {
+                $normalized['sender_name'] = $sender->name;
+            } elseif (empty($normalized['sender_name']) && $sender) {
+                $normalized['sender_name'] = $sender->name ?: $sender->username;
             }
         } elseif ($this->user()) {
             $normalized['sender_id'] = $this->user()->getKey();
-            if (empty($normalized['sender_name'])) {
+            if (! empty($this->user()->name)) {
                 $normalized['sender_name'] = $this->user()->name;
+            } elseif (empty($normalized['sender_name'])) {
+                $normalized['sender_name'] = $this->user()->name ?: $this->user()->username;
             }
         }
 

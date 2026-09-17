@@ -48,7 +48,8 @@
         </div>
         <div class="col-md-3">
             <label class="form-label" for="sender_name">Nama pada Dokumen</label>
-            <input class="form-control" id="sender_name" name="sender_name" value="{{ old('sender_name', $quotation->sender_name ?: auth()->user()->name) }}" required>
+            <input class="form-control" id="sender_name" name="sender_name" value="{{ old('sender_name', $quotation->sender?->name ?? ($quotation->sender_name ?: auth()->user()->name)) }}" readonly required>
+            <div class="form-hint">Diambil dari field Nama user pengirim.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label" for="sender_title">Jabatan pengirim</label>
@@ -107,7 +108,7 @@
         if (!senderSelect) return;
         const selectedOption = senderSelect.options[senderSelect.selectedIndex];
         const selectedId = parseInt(senderSelect.value, 10);
-        if (selectedOption && senderNameInput && !senderNameInput.dataset.manuallyEdited) {
+        if (selectedOption && senderNameInput) {
             senderNameInput.value = selectedOption.dataset.name || '';
         }
         if (senderNotice) {
@@ -123,14 +124,8 @@
 
     if (senderSelect) {
         senderSelect.addEventListener('change', () => {
-            if (senderNameInput) delete senderNameInput.dataset.manuallyEdited;
             updateSenderNotice();
         });
-        if (senderNameInput) {
-            senderNameInput.addEventListener('input', () => {
-                senderNameInput.dataset.manuallyEdited = 'true';
-            });
-        }
         updateSenderNotice();
     }
 })()

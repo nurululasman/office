@@ -203,11 +203,15 @@ class QuotationController extends Controller
         $defaultApprovalMode = $this->approvalMode();
         $approvalMode = ! $isSelfSender ? 'maker_checker' : $defaultApprovalMode;
 
+        $sender = User::query()->find($senderId) ?? User::query()->find($creatorId);
+        $senderName = ($sender && ! empty($sender->name)) ? $sender->name : ($data['sender_name'] ?? '');
+
         $fillData = array_merge(
             collect($data)->except(['content_html', 'terms_html', 'lock_version', 'submit_action'])->all(),
             [
                 'created_by' => $creatorId,
                 'sender_id' => $senderId,
+                'sender_name' => $senderName,
                 'approval_mode' => $approvalMode,
                 'template_snapshot' => $keepsTemplate ? $quotation->template_snapshot : $template->loadMissing('companyProfile')->snapshot(),
                 'content_html' => $contentHtml,

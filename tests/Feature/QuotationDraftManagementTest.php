@@ -112,6 +112,84 @@ class QuotationDraftManagementTest extends TestCase
             ->assertSee('Procurement Manager');
     }
 
+    public function test_quotation_sender_name_takes_user_name_field_not_username(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $maker->update(['name' => 'Maman Suratman', 'username' => 'superadmin']);
+
+        $signer = $this->userWithRole('quotation-signer');
+        $signer->update(['name' => 'Ardhian Widyanto', 'username' => 'ardhian']);
+
+        $template = $this->template();
+
+        // 1. Self sender takes maker->name, not username
+        $payload = $this->payload($template);
+        $payload['sender_id'] = $maker->id;
+        $payload['sender_name'] = 'superadmin';
+
+        $this->as($maker)->post(route('quotations.store'), $payload)->assertSessionHasNoErrors();
+        $q1 = Quotation::query()->latest()->firstOrFail();
+        $this->assertSame('Maman Suratman', $q1->sender_name);
+
+        // 2. Different sender takes signer->name, not username
+        $payload2 = $this->payload($template);
+        $payload2['sender_id'] = $signer->id;
+        $payload2['sender_name'] = 'ardhian';
+
+        $response2 = $this->as($maker)->post(route('quotations.store'), $payload2);
+        $response2->assertSessionHasNoErrors();
+        $q2 = Quotation::query()->where('id', '!=', $q1->getKey())->firstOrFail();
+        $this->assertSame('Ardhian Widyanto', $q2->sender_name);
+
+        // 3. Document preview and show renders the name field
+        $this->as($maker)->get(route('quotations.show', $q2))
+            ->assertOk()
+            ->assertSee('Ardhian Widyanto');
+
+        $this->as($maker)->get(route('quotations.preview', $q2))
+            ->assertOk()
+            ->assertSee('Ardhian Widyanto');
+    }
+
+    public function test_quotation_sender_name_does_not_change_when_user_logs_in_from_sso(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $maker->update([
+            'sso_issuer' => 'https://sso.example.test',
+            'sso_subject' => 'sub-maman-123',
+            'name' => 'Maman Suratman',
+            'username' => 'superadmin',
+        ]);
+
+        $template = $this->template();
+        $payload = $this->payload($template);
+        $payload['sender_id'] = $maker->id;
+
+        $this->as($maker)->post(route('quotations.store'), $payload)->assertSessionHasNoErrors();
+        $quotation = Quotation::query()->latest()->firstOrFail();
+        $this->assertSame('Maman Suratman', $quotation->sender_name);
+
+        // Simulate user logging in from SSO where SSO profile sends username in name
+        $profile = new \App\Data\Identity\SsoProfile(
+            issuer: $maker->sso_issuer,
+            subject: $maker->sso_subject,
+            tenantId: 'tenant-office',
+            email: $maker->email,
+            name: 'superadmin',
+            avatarUrl: null,
+            username: 'superadmin',
+        );
+
+        $provisioner = app(\App\Services\Identity\SsoUserProvisioner::class);
+        $updatedUser = $provisioner->provision($profile);
+
+        // User's name in table users does not change
+        $this->assertSame('Maman Suratman', $updatedUser->fresh()->name);
+
+        // Quotation's sender_name does not change
+        $this->assertSame('Maman Suratman', $quotation->fresh()->sender_name);
+    }
+
     public function obsolete_validation_follows_template_value_types_and_rejects_unknown_keys(): void
     {
         $maker = $this->userWithRole('quotation-maker');

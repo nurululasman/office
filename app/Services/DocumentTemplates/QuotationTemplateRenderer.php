@@ -137,7 +137,7 @@ final class QuotationTemplateRenderer
             'customer_address' => (string) $quotation->customer_address,
             'attention_name' => (string) ($quotation->attention_name ?? ''),
             'attention_role' => (string) ($quotation->attention_role ?? ''),
-            'sender_name' => (string) $quotation->sender_name,
+            'sender_name' => (string) ($quotation->sender?->name ?: ($quotation->creator?->name ?: $quotation->sender_name)),
             'sender_title' => (string) $quotation->sender_title,
             'currency' => (string) $quotation->currency,
             'intro_text' => (string) ($quotation->intro_text ?? ''),

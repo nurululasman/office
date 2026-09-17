@@ -11,7 +11,7 @@
                 @endif
             @endif
         </div>
-        <div class="signature-name">{{ $quotation->sender_name }}</div>
+        <div class="signature-name">{{ $quotation->sender?->name ?: ($quotation->creator?->name ?: $quotation->sender_name) }}</div>
         <div>{{ $quotation->sender_title }}</div>
     </div>
     <div>
