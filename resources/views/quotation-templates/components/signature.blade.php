@@ -18,5 +18,6 @@
         <div class="signature-heading">Approved By,</div>
         <div class="signature-space" style="position: relative; height: 28mm; min-height: 28mm;"></div>
         <div class="signature-name">{{ $quotation->attention_name ?: $quotation->customer_name }}</div>
+        <div>{{ $quotation->attention_role }}</div>
     </div>
 </section>

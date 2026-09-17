@@ -140,6 +140,7 @@ class QuotationWorkflowTest extends TestCase
             'template_id' => $quotation->template_id, 'quotation_date' => '2026-07-18',
             'subject' => 'Storage quotation revised', 'customer_name' => 'Customer A', 'customer_address' => 'Jakarta',
             'sender_name' => 'Sales JBLU', 'sender_title' => 'Sales Manager', 'currency' => 'IDR',
+            'content_html' => '<p>Storage revised 120000</p>', 'terms_html' => '<p>Terms</p>',
             'items' => [['values' => ['service' => 'Storage revised', 'price' => '120000']]], 'terms' => [],
             'lock_version' => 2,
         ])->assertRedirect(route('quotations.show', $quotation));
@@ -291,6 +292,7 @@ class QuotationWorkflowTest extends TestCase
             'template_id' => $template->getKey(), 'quotation_date' => '2026-07-18',
             'subject' => 'Storage quotation', 'customer_name' => 'Customer A', 'customer_address' => 'Jakarta',
             'sender_name' => 'Sales JBLU', 'sender_title' => 'Sales Manager', 'currency' => 'IDR',
+            'content_html' => '<p>Storage 125000</p>', 'terms_html' => '<p>Terms</p>',
             'items' => [['values' => ['service' => 'Storage', 'price' => '125000']]], 'terms' => [],
         ]);
         $response->assertSessionHasNoErrors();

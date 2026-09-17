@@ -27,9 +27,11 @@ final class DocumentTemplateHtmlSanitizer
         'thead' => ['class', 'style'],
         'tbody' => ['class', 'style'],
         'tfoot' => ['class', 'style'],
+        'colgroup' => ['class', 'style', 'span'],
+        'col' => ['class', 'style', 'span', 'width'],
         'tr' => ['class', 'style'],
-        'th' => ['class', 'style', 'colspan', 'rowspan', 'scope'],
-        'td' => ['class', 'style', 'colspan', 'rowspan'],
+        'th' => ['class', 'style', 'colspan', 'rowspan', 'scope', 'width'],
+        'td' => ['class', 'style', 'colspan', 'rowspan', 'width'],
         'div' => ['class', 'style'],
         'span' => ['class', 'style'],
         'hr' => ['class'],
@@ -39,7 +41,7 @@ final class DocumentTemplateHtmlSanitizer
     private const ALLOWED_TAGS = [
         'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
         'h1', 'h2', 'h3', 'h4', 'blockquote', 'ul', 'ol', 'li',
-        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+        'table', 'thead', 'tbody', 'tfoot', 'colgroup', 'col', 'tr', 'th', 'td',
         'div', 'span', 'hr',
     ];
 
@@ -143,7 +145,8 @@ final class DocumentTemplateHtmlSanitizer
             $normalized = match ($name) {
                 'class' => $this->sanitizeClass($value),
                 'style' => $this->sanitizeStyle($value, $tag),
-                'start', 'border', 'colspan', 'rowspan' => preg_match('/\A\d{1,3}\z/', $value) ? $value : '',
+                'start', 'border', 'colspan', 'rowspan', 'span' => preg_match('/\A\d{1,3}\z/', $value) ? $value : '',
+                'width' => preg_match('/\A(?:\d{1,3}%|\d{1,4}(?:px)?)\z/', $value) ? $value : '',
                 'scope' => in_array($value, ['row', 'col', 'rowgroup', 'colgroup'], true) ? $value : '',
                 default => '',
             };
@@ -184,8 +187,9 @@ final class DocumentTemplateHtmlSanitizer
                 'margin-left' => in_array($tag, ['p', 'h1', 'h2', 'h3', 'h4'], true)
                     && preg_match('/\A(?:0|[1-9]\d?(?:\.\d+)?)(?:px|mm)\z/', $propertyValue) === 1,
                 'border-collapse' => $tag === 'table' && $propertyValue === 'collapse',
-                'width' => $tag === 'table'
-                    && preg_match('/\A(?:100|[1-9]?\d)(?:\.\d+)?%\z/', $propertyValue) === 1,
+                'width' => in_array($tag, ['table', 'colgroup', 'col', 'th', 'td'], true)
+                    && (preg_match('/\A(?:100|[1-9]?\d)(?:\.\d+)?%\z/', $propertyValue) === 1
+                        || preg_match('/\A(?:0|[1-9]\d*(?:\.\d+)?)(?:px|mm)\z/', $propertyValue) === 1),
                 default => false,
             };
 

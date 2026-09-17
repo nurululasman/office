@@ -70,9 +70,11 @@
                 'thead[style|class]',
                 'tbody[style|class]',
                 'tfoot[style|class]',
+                'colgroup[style|class|span]',
+                'col[style|class|span|width]',
                 'tr[style|class]',
-                'th[style|class|colspan|rowspan|scope]',
-                'td[style|class|colspan|rowspan]',
+                'th[style|class|colspan|rowspan|scope|width]',
+                'td[style|class|colspan|rowspan|width]',
                 'div[style|class]',
                 'span[style|class]',
                 'hr[class]',
@@ -85,8 +87,10 @@
                 h3: 'margin-left',
                 h4: 'margin-left',
                 table: 'border-collapse,width',
-                th: 'text-align,vertical-align',
-                td: 'text-align,vertical-align',
+                colgroup: 'width',
+                col: 'width',
+                th: 'text-align,vertical-align,width',
+                td: 'text-align,vertical-align,width',
             },
             content_style: [
                 'body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; line-height: 1.4; margin: 16px; }',
@@ -94,10 +98,14 @@
                 'th, td { border: 1px solid #7b8794; padding: 6px; }',
                 '.mce-pagebreak { border-top: 2px dashed #8b96a3; }',
             ].join(' '),
+            init_instance_callback: (editor) => {
+                editor.getElement()?.removeAttribute('required');
+            },
             setup: (editor) => {
-                if (itemOnly) {
-                    editor.on('change input undo redo', () => editor.save());
+                const sync = () => editor.save();
+                editor.on('change input undo redo SetContent ExecCommand NodeChange blur TableModified', sync);
 
+                if (itemOnly) {
                     return;
                 }
                 const scalarPlaceholders = [
@@ -155,16 +163,23 @@
                         },
                     ]),
                 });
-                editor.on('change input undo redo', () => editor.save());
             },
         }).catch(() => {
             fallback?.classList.remove('d-none');
             textarea.classList.remove('d-none');
         });
 
-        textarea.form?.addEventListener('submit', () => {
-            window.tinymce.triggerSave();
-        });
+        const form = textarea.form;
+        if (form) {
+            form.querySelectorAll('button[type="submit"]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    window.tinymce?.triggerSave();
+                });
+            });
+            form.addEventListener('submit', () => {
+                window.tinymce?.triggerSave();
+            });
+        }
     };
 
     if (document.readyState === 'loading') {

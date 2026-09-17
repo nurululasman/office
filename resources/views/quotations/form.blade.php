@@ -78,10 +78,24 @@
         closing.value = defaults.closing_text ?? '';
         const editor = window.tinymce?.get('content_html');
         const termsEditor = window.tinymce?.get('terms_html');
-        if (editor) editor.setContent('');
-        else document.getElementById('content_html').value = '';
-        if (termsEditor) termsEditor.setContent('');
-        else document.getElementById('terms_html').value = '';
+        if (editor) {
+            editor.setContent('');
+            editor.save();
+        } else {
+            document.getElementById('content_html').value = '';
+        }
+
+        const terms = defaults.terms ?? [];
+        let termsContent = '';
+        if (Array.isArray(terms) && terms.length > 0) {
+            termsContent = '<ol>' + terms.map(t => '<li>' + String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])) + '</li>').join('') + '</ol>';
+        }
+        if (termsEditor) {
+            termsEditor.setContent(termsContent);
+            termsEditor.save();
+        } else {
+            document.getElementById('terms_html').value = termsContent;
+        }
     });
 
     const currentUserId = {{ auth()->id() }};

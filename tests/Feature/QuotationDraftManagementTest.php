@@ -61,6 +61,57 @@ class QuotationDraftManagementTest extends TestCase
         $this->assertNull($quotation->sender_title);
     }
 
+    public function test_draft_with_tinymce_table_in_items(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $template = $this->template();
+
+        $tableCases = [
+            'colgroup table' => '<table style="border-collapse: collapse; width: 100%;" border="1"><colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup><tbody><tr><td><br></td><td><br></td></tr></tbody></table>',
+            'with th header' => '<table style="border-collapse: collapse; width: 100%;" border="1"><thead><tr><th scope="col" style="width: 50%;">Item</th><th scope="col" style="width: 50%;">Price</th></tr></thead><tbody><tr><td>A</td><td>100</td></tr></tbody></table>',
+            'with cell styles' => '<table style="border-collapse: collapse; width: 100%;" border="1"><tbody><tr><td style="text-align: right; vertical-align: top; width: 50%;">Item</td><td style="background-color: #f0f0f0; border-color: red;">Val</td></tr></tbody></table>',
+            'with colspan rowspan' => '<table style="border-collapse: collapse; width: 100%;" border="1"><tbody><tr><td colspan="2">Merged</td></tr><tr><td>1</td><td>2</td></tr></tbody></table>',
+            'with paragraph inside cell' => '<table style="border-collapse: collapse; width: 100%;" border="1"><tbody><tr><td><p>Item inside p</p></td><td>100</td></tr></tbody></table>',
+            'empty cells' => '<table style="border-collapse: collapse; width: 100%;" border="1"><tbody><tr><td></td><td></td></tr></tbody></table>',
+            'with nbsp' => '<table style="border-collapse: collapse; width: 100%;" border="1"><tbody><tr><td>&nbsp;</td><td>&nbsp;</td></tr></tbody></table>',
+            'styled table tag' => '<table style="border-collapse: collapse; width: 100%; margin: auto;" border="1"><tbody><tr><td>Item</td><td>100</td></tr></tbody></table>',
+        ];
+
+        foreach ($tableCases as $name => $tableHtml) {
+            $payload = $this->payload($template);
+            $payload['content_html'] = $tableHtml;
+
+            $response = $this->as($maker)->post(route('quotations.store'), $payload);
+            $response->assertSessionHasNoErrors();
+            $response->assertRedirect();
+
+            $quotation = Quotation::query()->latest()->firstOrFail();
+            $previewResponse = $this->as($maker)->get(route('quotations.preview', $quotation));
+            $previewResponse->assertOk();
+        }
+    }
+
+    public function test_signature_block_renders_attention_role_under_attention_name(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $template = $this->template();
+        $template->update([
+            'content_html' => DocumentTemplate::LEGACY_CONTENT_HTML.'<div>{{ signature_block }}</div>',
+        ]);
+
+        $payload = $this->payload($template);
+        $payload['attention_name'] = 'Budi Santoso';
+        $payload['attention_role'] = 'Procurement Manager';
+
+        $this->as($maker)->post(route('quotations.store'), $payload)->assertSessionHasNoErrors();
+        $quotation = Quotation::query()->latest()->firstOrFail();
+
+        $preview = $this->as($maker)->get(route('quotations.preview', $quotation));
+        $preview->assertOk()
+            ->assertSee('Budi Santoso')
+            ->assertSee('Procurement Manager');
+    }
+
     public function obsolete_validation_follows_template_value_types_and_rejects_unknown_keys(): void
     {
         $maker = $this->userWithRole('quotation-maker');
