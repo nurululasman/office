@@ -28,8 +28,29 @@
                 <div class="col-12"><div class="card"><div class="card-body d-flex align-items-center gap-3"><div class="me-auto"><strong>PDF quotation resmi</strong><div class="text-secondary">Status: {{ $pdfFile ? str($pdfFile->status)->headline() : 'Belum tersedia' }}@if($pdfFile?->status === 'failed') - pembuatan gagal dan perlu di-retry oleh administrator.@elseif(in_array($pdfFile?->status, ['queued', 'processing'], true)) - file sedang dibuat oleh worker PDF.@endif</div></div>@if($pdfFile?->status === 'ready')<a class="btn" target="_blank" rel="noopener" href="{{ route('quotations.pdf.preview', $quotation) }}">Preview PDF</a><a class="btn btn-primary" href="{{ route('quotations.pdf.download', $quotation) }}">Download PDF</a>@endif</div></div></div>
             @endcan
         @endif
-        <div class="col-lg-8"><div class="card"><div class="card-header"><h2 class="card-title">Isi quotation</h2></div><div class="card-body"><p class="text-secondary mb-0">Isi dan format item tersimpan sebagai HTML quotation. Gunakan Preview untuk melihat hasil dokumen.</p></div></div>
-            <div class="card mt-3"><div class="card-header"><h2 class="card-title">Terms quotation</h2></div><div class="card-body"><p class="text-secondary mb-0">Terms tersimpan sebagai HTML quotation. Gunakan Preview untuk melihat hasil formatnya.</p></div></div>
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header"><h2 class="card-title">Pengantar quotation (Kalimat Pembuka)</h2></div>
+                <div class="card-body">
+                    @if($quotation->intro_text)
+                        <div class="text-body" style="white-space: pre-line;">{{ $quotation->intro_text }}</div>
+                    @else
+                        <p class="text-secondary mb-0">Tidak ada kalimat pengantar khusus.</p>
+                    @endif
+                </div>
+            </div>
+            <div class="card mb-3"><div class="card-header"><h2 class="card-title">Isi quotation</h2></div><div class="card-body"><p class="text-secondary mb-0">Isi dan format item tersimpan sebagai HTML quotation. Gunakan Preview untuk melihat hasil dokumen.</p></div></div>
+            <div class="card mb-3"><div class="card-header"><h2 class="card-title">Terms quotation</h2></div><div class="card-body"><p class="text-secondary mb-0">Terms tersimpan sebagai HTML quotation. Gunakan Preview untuk melihat hasil formatnya.</p></div></div>
+            <div class="card mb-3">
+                <div class="card-header"><h2 class="card-title">Penutup quotation (Kalimat Penutup)</h2></div>
+                <div class="card-body">
+                    @if($quotation->closing_text)
+                        <div class="text-body" style="white-space: pre-line;">{{ $quotation->closing_text }}</div>
+                    @else
+                        <p class="text-secondary mb-0">Tidak ada kalimat penutup khusus.</p>
+                    @endif
+                </div>
+            </div>
         </div>
         <div class="col-lg-4"><div class="card"><div class="card-body"><dl class="row mb-0"><dt class="col-5">Status</dt><dd class="col-7">{{ str($quotation->status)->replace('_', ' ')->headline() }}</dd><dt class="col-5">Tanggal</dt><dd class="col-7">{{ $quotation->quotation_date->format('d M Y') }}</dd><dt class="col-5">Pelanggan</dt><dd class="col-7">{{ $quotation->customer_name }}</dd><dt class="col-5">Attention</dt><dd class="col-7">{{ $quotation->attention_name ?: '—' }}</dd><dt class="col-5">Pengirim</dt><dd class="col-7">{{ $quotation->sender?->name ?? ($quotation->creator?->name ?? $quotation->sender_name) }}</dd><dt class="col-5">Dibuat oleh</dt><dd class="col-7">{{ $quotation->creator->name }}</dd><dt class="col-5">Mata uang</dt><dd class="col-7">{{ $quotation->currency }}</dd><dt class="col-5">Nomor</dt><dd class="col-7">{{ $quotation->document?->number ?? 'Belum diterbitkan' }}</dd>@if($quotation->completed_at)<dt class="col-5">Completed</dt><dd class="col-7">{{ $quotation->completed_at->timezone(config('office.business_timezone'))->format('d M Y H:i') }}<br>{{ $quotation->completer?->name }}</dd>@endif @if($quotation->document?->voided_at)<dt class="col-5">Void</dt><dd class="col-7">{{ $quotation->document->voided_at->timezone(config('office.business_timezone'))->format('d M Y H:i') }}<br>{{ $quotation->document->voider?->name }}<div class="text-danger">{{ $quotation->document->void_reason }}</div></dd>@endif</dl></div></div></div>
         <div class="col-12"><div class="card"><div class="card-header"><h2 class="card-title">Audit trail quotation</h2></div><div class="table-responsive"><table class="table card-table table-vcenter"><thead><tr><th>Waktu</th><th>Aktor</th><th>Aksi</th><th>Perubahan</th></tr></thead><tbody>@forelse($audits as $audit)<tr><td>{{ $audit->occurred_at->timezone(config('office.business_timezone'))->format('d M Y H:i') }}</td><td>{{ $audit->actor?->name ?? 'Sistem' }}</td><td><code>{{ $audit->action }}</code></td><td><details><summary>Lihat snapshot</summary><pre class="mt-2 mb-0 text-wrap">{{ json_encode(['before' => $audit->before, 'after' => $audit->after, 'context' => $audit->context], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre></details></td></tr>@empty<tr><td colspan="4" class="text-center text-secondary py-4">Belum ada audit quotation.</td></tr>@endforelse</tbody></table></div></div></div>

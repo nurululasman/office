@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Data\Identity\SsoProfile;
 use App\Models\CompanyProfile;
 use App\Models\DocumentTemplate;
 use App\Models\Quotation;
 use App\Models\User;
+use App\Services\Identity\SsoUserProvisioner;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -170,7 +172,7 @@ class QuotationDraftManagementTest extends TestCase
         $this->assertSame('Maman Suratman', $quotation->sender_name);
 
         // Simulate user logging in from SSO where SSO profile sends username in name
-        $profile = new \App\Data\Identity\SsoProfile(
+        $profile = new SsoProfile(
             issuer: $maker->sso_issuer,
             subject: $maker->sso_subject,
             tenantId: 'tenant-office',
@@ -180,7 +182,7 @@ class QuotationDraftManagementTest extends TestCase
             username: 'superadmin',
         );
 
-        $provisioner = app(\App\Services\Identity\SsoUserProvisioner::class);
+        $provisioner = app(SsoUserProvisioner::class);
         $updatedUser = $provisioner->provision($profile);
 
         // User's name in table users does not change
@@ -446,6 +448,40 @@ class QuotationDraftManagementTest extends TestCase
         $this->assertSame($second->content_html, $quotation->template_snapshot['content_html']);
         $this->assertSame($second->content_sha256, $quotation->template_content_sha256);
         $this->assertStringContainsString('Storage / day', $quotation->content_html);
+    }
+
+    public function test_create_form_displays_intro_and_closing_from_template_and_allows_override(): void
+    {
+        $maker = $this->userWithRole('quotation-maker');
+        $template = $this->template();
+        $template->update([
+            'default_intro_text' => 'Template intro: We offer logistics services',
+            'default_closing_text' => 'Template closing: Looking forward to cooperation',
+        ]);
+
+        $createResponse = $this->as($maker)->get(route('quotations.create'))->assertOk();
+        $createResponse->assertSee('Pengantar quotation (Kalimat Pembuka)');
+        $createResponse->assertSee('Penutup quotation (Kalimat Penutup)');
+        $createResponse->assertSee('Template intro: We offer logistics services');
+        $createResponse->assertSee('Template closing: Looking forward to cooperation');
+
+        $payload = $this->payload($template);
+        $payload['intro_text'] = 'Custom Opening: Overridden by user';
+        $payload['closing_text'] = 'Custom Closing: Overridden by user';
+
+        $this->as($maker)->post(route('quotations.store'), $payload)->assertRedirect();
+
+        $quotation = Quotation::query()->sole();
+        $this->assertSame('Custom Opening: Overridden by user', $quotation->intro_text);
+        $this->assertSame('Custom Closing: Overridden by user', $quotation->closing_text);
+
+        $showResponse = $this->as($maker)->get(route('quotations.show', $quotation))->assertOk();
+        $showResponse->assertSee('Custom Opening: Overridden by user');
+        $showResponse->assertSee('Custom Closing: Overridden by user');
+
+        $previewResponse = $this->as($maker)->get(route('quotations.preview', $quotation))->assertOk();
+        $previewResponse->assertSee('Custom Opening: Overridden by user');
+        $previewResponse->assertSee('Custom Closing: Overridden by user');
     }
 
     private function template(): DocumentTemplate

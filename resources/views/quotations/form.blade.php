@@ -6,6 +6,11 @@
 @php
     $isEdit = $quotation->exists;
     $selected = old('template_id', $selectedTemplateId ?: $templates->first()?->getKey());
+    $templateDefaults = $templates->mapWithKeys(fn ($template) => [$template->getKey() => [
+        'intro_text' => $template->default_intro_text,
+        'closing_text' => $template->default_closing_text,
+        'terms' => $template->default_terms,
+    ]]);
     $templateSettings = $templates->mapWithKeys(fn ($template) => [$template->getKey() => [
         'defaults' => [
             'intro_text' => $template->default_intro_text,
@@ -55,11 +60,31 @@
             <label class="form-label" for="sender_title">Jabatan pengirim</label>
             <input class="form-control" id="sender_title" name="sender_title" value="{{ old('sender_title', $quotation->sender_title) }}">
         </div>
-        <div class="col-md-6"><label class="form-label" for="intro_text">Pengantar</label><textarea class="form-control" id="intro_text" name="intro_text">{{ old('intro_text', $quotation->intro_text ?? $templates->firstWhere('id', $selected)?->default_intro_text) }}</textarea></div>
-        <div class="col-md-6"><label class="form-label" for="closing_text">Penutup</label><textarea class="form-control" id="closing_text" name="closing_text">{{ old('closing_text', $quotation->closing_text ?? $templates->firstWhere('id', $selected)?->default_closing_text) }}</textarea></div>
     </div></div></div>
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <h2 class="card-title mb-0">Pengantar quotation (Kalimat Pembuka)</h2>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="reset-intro-btn">Muat ulang dari template</button>
+        </div>
+        <div class="card-body">
+            <label class="form-label" for="intro_text">Kalimat pengantar / pembuka</label>
+            <textarea class="form-control" id="intro_text" name="intro_text" rows="4" placeholder="Masukkan kalimat pengantar / pembuka quotation...">{{ old('intro_text', $quotation->intro_text ?? $templates->firstWhere('id', $selected)?->default_intro_text) }}</textarea>
+            <div class="form-hint">Kalimat pembuka sebelum daftar item quotation. Nilai awal dimuat dari template aktif dan dapat disesuaikan / dioverride khusus untuk quotation ini.</div>
+        </div>
+    </div>
     <div class="card mb-3"><div class="card-header"><h2 class="card-title">Item quotation</h2></div><div class="card-body"><label class="form-label" for="content_html">Isi item</label><textarea class="form-control" id="content_html" name="content_html" rows="20" required data-editor-mode="item">{{ old('content_html', $quotation->exists ? $quotation->content_html : '') }}</textarea><div class="form-hint">Editor ini hanya untuk item quotation. Buat tabel, daftar, dan format item secara bebas; hasilnya disimpan sebagai HTML yang telah disanitasi.</div><div class="alert alert-warning mt-2 d-none" id="tinymce-fallback" role="status">Editor visual tidak dapat dimuat. Konten item masih dapat diedit sebagai HTML source.</div></div></div>
     <div class="card mb-3"><div class="card-header"><h2 class="card-title">Terms quotation</h2></div><div class="card-body"><label class="form-label" for="terms_html">Isi terms</label><textarea class="form-control" id="terms_html" name="terms_html" rows="12" required data-editor-mode="item">{{ old('terms_html', $quotation->exists ? $quotation->terms_html : '') }}</textarea><div class="form-hint">Editor ini hanya untuk terms quotation. Gunakan daftar, tabel, atau format HTML lain sesuai kebutuhan.</div></div></div>
+    <div class="card mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <h2 class="card-title mb-0">Penutup quotation (Kalimat Penutup)</h2>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="reset-closing-btn">Muat ulang dari template</button>
+        </div>
+        <div class="card-body">
+            <label class="form-label" for="closing_text">Kalimat penutup</label>
+            <textarea class="form-control" id="closing_text" name="closing_text" rows="4" placeholder="Masukkan kalimat penutup quotation...">{{ old('closing_text', $quotation->closing_text ?? $templates->firstWhere('id', $selected)?->default_closing_text) }}</textarea>
+            <div class="form-hint">Kalimat penutup setelah terms quotation. Nilai awal dimuat dari template aktif dan dapat disesuaikan / dioverride khusus untuk quotation ini.</div>
+        </div>
+    </div>
     <div class="text-end"><button class="btn me-2" type="submit" name="submit_action" value="preview" @disabled($templates->isEmpty())>Simpan &amp; preview</button><button class="btn btn-primary" type="submit" name="submit_action" value="save" @disabled($templates->isEmpty())>Simpan draft</button></div>
 </form></div></div>
 @endsection
@@ -70,9 +95,29 @@
 <script>
 (() => {
     const templates = @json($templateSettings);
+    const templateDefaults = @json($templateDefaults);
     const templateSelect = document.getElementById('template_id');
     const intro = document.getElementById('intro_text');
     const closing = document.getElementById('closing_text');
+    const resetIntroBtn = document.getElementById('reset-intro-btn');
+    const resetClosingBtn = document.getElementById('reset-closing-btn');
+
+    if (resetIntroBtn) {
+        resetIntroBtn.addEventListener('click', () => {
+            if (!templateSelect.value) return;
+            const defs = templateDefaults[templateSelect.value] ?? {};
+            intro.value = defs.intro_text ?? '';
+        });
+    }
+
+    if (resetClosingBtn) {
+        resetClosingBtn.addEventListener('click', () => {
+            if (!templateSelect.value) return;
+            const defs = templateDefaults[templateSelect.value] ?? {};
+            closing.value = defs.closing_text ?? '';
+        });
+    }
+
     templateSelect.addEventListener('change', () => {
         const defaults = templates[templateSelect.value]?.defaults ?? {};
         intro.value = defaults.intro_text ?? '';
