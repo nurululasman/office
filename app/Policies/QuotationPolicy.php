@@ -42,6 +42,19 @@ class QuotationPolicy
         return $user->hasPermissionTo('quotations.pdf.read');
     }
 
+    public function regeneratePdf(User $user, Quotation $quotation): bool
+    {
+        if (! in_array($quotation->status, ['complete', 'void'], true)) {
+            return false;
+        }
+
+        return $user->hasPermissionTo('quotations.pdf.read')
+            && ($user->hasPermissionTo('quotations.update-any')
+                || ($quotation->created_by === $user->getKey() && $user->hasPermissionTo('quotations.update-own'))
+                || (int) $quotation->sender_id === (int) $user->getKey()
+                || $user->hasPermissionTo('quotations.approve'));
+    }
+
     public function completeDirect(User $user, Quotation $quotation): bool
     {
         if (! $quotation->isSelfSender()) {

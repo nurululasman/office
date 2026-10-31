@@ -54,6 +54,7 @@ Route::middleware(['auth', 'sso.session'])->group(function () {
     Route::get('/quotations/{quotation}/preview', [QuotationController::class, 'preview'])->middleware('throttle:office-preview')->name('quotations.preview');
     Route::get('/quotations/{quotation}/pdf/preview', [QuotationController::class, 'previewPdf'])->middleware('throttle:office-preview')->name('quotations.pdf.preview');
     Route::get('/quotations/{quotation}/pdf/download', [QuotationController::class, 'downloadPdf'])->middleware('throttle:office-preview')->name('quotations.pdf.download');
+    Route::post('/quotations/{quotation}/pdf/regenerate', [QuotationController::class, 'regeneratePdf'])->middleware('throttle:office-mutation')->name('quotations.pdf.regenerate');
     Route::post('/quotations/{quotation}/complete', [QuotationController::class, 'complete'])->middleware('throttle:office-mutation')->name('quotations.complete');
     Route::post('/quotations/{quotation}/submit', [QuotationController::class, 'submit'])->middleware('throttle:office-mutation')->name('quotations.submit');
     Route::post('/quotations/{quotation}/approve', [QuotationController::class, 'approve'])->middleware('throttle:office-mutation')->name('quotations.approve');

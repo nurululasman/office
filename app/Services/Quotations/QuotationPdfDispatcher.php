@@ -33,4 +33,31 @@ final class QuotationPdfDispatcher
 
         return $file;
     }
+
+    public function regenerate(Quotation $quotation, User $actor): GeneratedFile
+    {
+        $path = "quotations/{$quotation->getKey()}/quotation.pdf";
+        $file = GeneratedFile::query()->firstOrCreate(
+            ['owner_type' => $quotation->getMorphClass(), 'owner_id' => $quotation->getKey(), 'kind' => 'quotation_pdf', 'path' => $path],
+            [
+                'template_id' => $quotation->template_id, 'status' => 'queued', 'attempts' => 0,
+                'disk' => config('office.documents.disk'), 'mime_type' => 'application/pdf',
+                'size' => null, 'sha256' => null, 'queued_at' => now('UTC'),
+                'generated_at' => null, 'generated_by' => $actor->getKey(),
+            ],
+        );
+
+        $file->update([
+            'status' => 'queued',
+            'last_error' => null,
+            'queued_at' => now('UTC'),
+            'generated_by' => $actor->getKey(),
+        ]);
+
+        GenerateQuotationPdf::dispatch($file->getKey())
+            ->onConnection(config('office.queues.pdf_connection'))
+            ->onQueue(config('office.queues.pdf'));
+
+        return $file;
+    }
 }

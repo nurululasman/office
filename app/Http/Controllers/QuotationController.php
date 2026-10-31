@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\DocumentTemplates\DocumentTemplateHtmlSanitizer;
 use App\Services\Quotations\QuotationDocumentRenderer;
+use App\Services\Quotations\QuotationPdfDispatcher;
 use App\Services\Quotations\QuotationWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -127,6 +128,22 @@ class QuotationController extends Controller
     public function downloadPdf(Quotation $quotation): StreamedResponse
     {
         return $this->pdfResponse($quotation, 'attachment');
+    }
+
+    public function regeneratePdf(
+        Quotation $quotation,
+        Request $request,
+        QuotationPdfDispatcher $dispatcher,
+        AuditLogger $audit,
+    ): RedirectResponse {
+        Gate::authorize('regeneratePdf', $quotation);
+
+        $dispatcher->regenerate($quotation, $request->user());
+
+        $audit->record('quotation.pdf_regenerated', $request->user(), $quotation, request: $request);
+
+        return redirect()->route('quotations.show', $quotation)
+            ->with('status', 'Permintaan regenerasi PDF quotation berhasil diproses.');
     }
 
     public function update(QuotationDraftRequest $request, Quotation $quotation, AuditLogger $audit): RedirectResponse
