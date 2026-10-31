@@ -7,7 +7,7 @@ Dokumen ini merupakan panduan resmi langkah demi langkah (*runbook*) untuk melak
 ## 1. Ringkasan Arsitektur & Spesifikasi Kebutuhan
 
 Sistem JBLU Office dibangun di atas stack teknologi berikut:
-- **Framework**: Laravel 12 (PHP 8.2+)
+- **Framework**: Laravel 13 (PHP 8.5+)
 - **Database**: PostgreSQL 15+ / 16 (Wajib timezone **UTC**)
 - **Web Server**: Nginx (Reverse Proxy & Static Cache dengan HTTPS/TLS)
 - **Process Manager**: Supervisor (menjalankan Queue Worker untuk antrean `pdf` dan `default`)
@@ -41,27 +41,27 @@ timedatectl
 
 ---
 
-## 3. Langkah 2: Instalasi PHP 8.2 & Ekstensi yang Dibutuhkan
+## 3. Langkah 2: Instalasi PHP 8.5 & Ekstensi yang Dibutuhkan
 
-Tambahkan repositori PPA Ondřej Surý dan pasang PHP 8.2 FPM beserta seluruh ekstensi yang dibutuhkan oleh Laravel dan PostgreSQL:
+Tambahkan repositori PPA Ondřej Surý dan pasang PHP 8.5 FPM beserta seluruh ekstensi yang dibutuhkan oleh Laravel dan PostgreSQL:
 
 ```bash
 sudo add-apt-repository ppa:ondrej/php -y
 sudo apt update
 
-sudo apt install -y php8.2-fpm php8.2-cli php8.2-pgsql php8.2-curl \
-    php8.2-mbstring php8.2-xml php8.2-zip php8.2-bcmath php8.2-intl \
-    php8.2-gd php8.2-redis php8.2-common
+sudo apt install -y php8.5-fpm php8.5-cli php8.5-pgsql php8.5-curl \
+    php8.5-mbstring php8.5-xml php8.5-zip php8.5-bcmath php8.5-intl \
+    php8.5-gd php8.5-redis php8.5-common
 ```
 
 Pastikan PHP dan PHP-FPM aktif:
 ```bash
 php -v
-sudo systemctl status php8.2-fpm
+sudo systemctl status php8.5-fpm
 ```
 
 ### Konfigurasi `php.ini` untuk Production
-Edit file konfigurasi `/etc/php/8.2/fpm/php.ini` dan `/etc/php/8.2/cli/php.ini`:
+Edit file konfigurasi `/etc/php/8.5/fpm/php.ini` dan `/etc/php/8.5/cli/php.ini`:
 
 ```ini
 upload_max_filesize = 20M
@@ -73,7 +73,7 @@ date.timezone = UTC
 
 Restart PHP-FPM:
 ```bash
-sudo systemctl restart php8.2-fpm
+sudo systemctl restart php8.5-fpm
 ```
 
 ---
@@ -383,7 +383,7 @@ server {
     # FastCGI PHP-FPM
     location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         include fastcgi_params;
         fastcgi_read_timeout 180;
@@ -545,7 +545,7 @@ php artisan optimize
 # 6. Restart queue workers (agar worker memuat kode PHP terbaru)
 php artisan queue:restart
 sudo supervisorctl restart all
-sudo systemctl restart php8.2-fpm
+sudo systemctl restart php8.5-fpm
 
 # 7. Matikan maintenance mode
 php artisan up

@@ -17,13 +17,13 @@ Dokumen ini juga merupakan checklist pengembangan. Sebuah fase hanya boleh ditan
 
 ## 2. Kondisi awal dan keputusan arsitektur
 
-Repository saat ini berupa Laravel 12/PHP 8.2 dengan struktur aplikasi dasar dan belum memiliki domain Office. Arsitektur yang dipilih adalah **modular monolith**: satu aplikasi Laravel dan satu database relasional, tetapi kode dipisahkan menurut domain. Pilihan ini cukup sederhana untuk dioperasikan, tetap aman untuk transaksi penomoran, dan dapat dipecah menjadi service terpisah bila skala masa depan membutuhkannya.
+Repository saat ini berupa Laravel 13/PHP 8.5 dengan struktur aplikasi dasar dan modul domain Office. Arsitektur yang dipilih adalah **modular monolith**: satu aplikasi Laravel dan satu database relasional, tetapi kode dipisahkan menurut domain. Pilihan ini cukup sederhana untuk dioperasikan, tetap aman untuk transaksi penomoran, dan dapat dipecah menjadi service terpisah bila skala masa depan membutuhkannya.
 
 ### 2.1 Stack yang direkomendasikan
 
 | Area | Pilihan | Alasan |
 |---|---|---|
-| Backend | Laravel 12, PHP 8.2+ | Sesuai repository dan mendukung transaksi, policy, queue, serta testing |
+| Backend | Laravel 13, PHP 8.5+ | Sesuai repository dan mendukung transaksi, policy, queue, serta testing |
 | Database | PostgreSQL 16+ | Sumber kebenaran dev/staging/production; mendukung constraint, transaksi, dan row locking untuk sequence |
 | UI | Blade + Tabler + Alpine.js melalui Vite | Memanfaatkan layout yang sudah ada, server-rendered, dan cukup dinamis tanpa kompleksitas SPA |
 | SSO | `league/oauth2-client` GenericProvider + adapter profile JBLU | Authorization Code + PKCE S256 terhadap endpoint eksplisit SSO internal |
