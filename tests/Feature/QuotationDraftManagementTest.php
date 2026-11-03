@@ -307,7 +307,7 @@ class QuotationDraftManagementTest extends TestCase
             ->assertSee('data-template-rendered="true"', false)
             ->assertSee('@page { size: A4 portrait; margin: 17mm 18mm 16mm; }', false)
             ->assertSee('.quotation-page { width: auto; min-height: 254mm; margin: 0; padding: 0 0 6mm; box-shadow: none; }', false)
-            ->assertSee('.document-footer { position: static; margin-top: 6mm; transform: none; }', false)
+            ->assertSee('.document-footer { position: fixed; right: 0; bottom: 0; left: 0; margin: 0; transform: none; }', false)
             ->assertSee('display: table-header-group', false)
             ->assertSee('.rate-table th, .rate-table td { padding: 0 2mm 1.8mm;', false)
             ->assertSee('break-inside: avoid', false)

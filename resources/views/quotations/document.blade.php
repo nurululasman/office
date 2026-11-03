@@ -58,7 +58,7 @@
             body { background: #fff; }
             .preview-toolbar { display: none !important; }
             .quotation-page { width: auto; min-height: 254mm; margin: 0; padding: 0 0 6mm; box-shadow: none; }
-            .document-footer { position: static; margin-top: 6mm; transform: none; }
+            .document-footer { position: fixed; right: 0; bottom: 0; left: 0; margin: 0; transform: none; }
         }
     </style>
 </head>
