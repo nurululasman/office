@@ -35,7 +35,9 @@ class Quotation extends Model
                 return;
             }
 
-            $allowed = $quotation->getOriginal('status') === 'complete' ? ['status', 'lock_version'] : [];
+            $allowed = $quotation->getOriginal('status') === 'complete'
+                ? ['status', 'lock_version', 'template_snapshot']
+                : ['template_snapshot'];
             if (array_diff(array_keys($quotation->getDirty()), $allowed) !== []) {
                 throw new LogicException('Quotation complete atau void bersifat immutable.');
             }
@@ -83,6 +85,35 @@ class Quotation extends Model
         }
 
         return (int) $this->sender_id === (int) $this->created_by;
+    }
+
+    public function refreshCompanyProfileSnapshot(): bool
+    {
+        $profile = null;
+        if ($this->template_id) {
+            $template = DocumentTemplate::query()->with('companyProfile')->find($this->template_id);
+            $profile = $template?->companyProfile;
+        }
+
+        if (! $profile) {
+            $profileId = $this->template_snapshot['company_profile']['id'] ?? null;
+            if ($profileId) {
+                $profile = CompanyProfile::query()->find($profileId);
+            }
+        }
+
+        if (! $profile) {
+            return false;
+        }
+
+        $snapshot = $this->template_snapshot ?? [];
+        $snapshot['company_profile'] = $profile->snapshot();
+        $this->template_snapshot = $snapshot;
+
+        $saved = $this->save();
+        $this->unsetRelation('template');
+
+        return $saved;
     }
 
     public function template(): BelongsTo

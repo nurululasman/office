@@ -98,6 +98,88 @@ class QuotationPdfRegenerationTest extends TestCase
         $response->assertSee(route('quotations.pdf.regenerate', $quotation));
     }
 
+    public function test_regenerate_pdf_updates_header_company_profile_data(): void
+    {
+        Queue::fake();
+
+        $maker = $this->userWithRole('quotation-maker');
+        $this->documentType('direct');
+
+        $profile = CompanyProfile::query()->firstOrCreate(['company_code' => 'JBLU'], [
+            'legal_name' => 'PT JBLU Lama', 'display_name' => 'JBLU', 'address_lines' => ['Jl. Sudirman Lama No. 1', 'Jakarta Selatan'],
+            'city' => 'Jakarta Selatan', 'postal_code' => '12190', 'country' => 'ID',
+            'phone' => '+62 21 111-0000', 'email' => 'old@jblu.co.id',
+        ]);
+
+        $customTemplateHtml = <<<'HTML'
+<p>{{ company_display_name }}</p>
+<p>{{ company_address }}</p>
+<p>{{ quotation_number }}</p>
+<p>{{ quotation_date }}</p>
+<p>{{ customer_name }}</p>
+<p>{{ customer_address }}</p>
+<p>{{ subject }}</p>
+<p>{{ intro_text }}</p>
+<div>{{ quotation_items }}</div>
+<div>{{ quotation_terms }}</div>
+<p>{{ closing_text }}</p>
+<p>{{ sender_name }}</p>
+<p>{{ sender_title }}</p>
+HTML;
+
+        $template = DocumentTemplate::query()->create([
+            'company_profile_id' => $profile->getKey(),
+            'document_type_id' => DocumentType::query()->sole()->getKey(),
+            'type' => 'quotation', 'version' => 1,
+            'name' => 'Quotation with Address',
+            'content_html' => $customTemplateHtml,
+            'settings' => ['columns' => [
+                ['key' => 'service', 'label' => 'Service', 'value_type' => 'text', 'required' => true],
+                ['key' => 'price', 'label' => 'Price', 'value_type' => 'currency', 'required' => true],
+            ]],
+        ]);
+
+        $response = $this->as($maker)->post(route('quotations.store'), [
+            'template_id' => $template->getKey(), 'quotation_date' => '2026-07-18',
+            'subject' => 'Storage quotation', 'customer_name' => 'Customer A', 'customer_address' => 'Jakarta',
+            'sender_name' => 'Sales JBLU', 'sender_title' => 'Sales Manager', 'currency' => 'IDR',
+            'content_html' => '<p>Storage 125000</p>', 'terms_html' => '<p>Terms</p>',
+            'items' => [['values' => ['service' => 'Storage', 'price' => '125000']]], 'terms' => [],
+        ]);
+        $response->assertSessionHasNoErrors();
+        $quotation = Quotation::query()->latest()->firstOrFail();
+
+        $this->as($maker)->post(route('quotations.complete', $quotation), ['lock_version' => 0]);
+        $quotation->refresh();
+        $this->assertSame('complete', $quotation->status);
+        $this->assertSame(['Jl. Sudirman Lama No. 1', 'Jakarta Selatan'], $quotation->template_snapshot['company_profile']['address_lines']);
+
+        // Update company profile data (address, phone, email, legal name)
+        $profile->update([
+            'legal_name' => 'PT JBLU Baru',
+            'address_lines' => ['Jl. MH Thamrin Baru No. 99', 'Jakarta Pusat'],
+            'city' => 'Jakarta Pusat',
+            'postal_code' => '10350',
+            'phone' => '+62 21 555-0199',
+            'email' => 'contact@jblu.co.id',
+        ]);
+
+        // Regenerate PDF
+        $response = $this->as($maker)->post(route('quotations.pdf.regenerate', $quotation));
+        $response->assertRedirect(route('quotations.show', $quotation));
+
+        $quotation->refresh();
+        $this->assertSame('PT JBLU Baru', $quotation->template_snapshot['company_profile']['legal_name']);
+        $this->assertSame(['Jl. MH Thamrin Baru No. 99', 'Jakarta Pusat'], $quotation->template_snapshot['company_profile']['address_lines']);
+        $this->assertSame('+62 21 555-0199', $quotation->template_snapshot['company_profile']['phone']);
+        $this->assertSame('contact@jblu.co.id', $quotation->template_snapshot['company_profile']['email']);
+
+        // Check rendered HTML
+        $renderedHtml = app(\App\Services\Quotations\QuotationDocumentRenderer::class)->content($quotation, false);
+        $this->assertStringContainsString("Jl. MH Thamrin Baru No. 99<br>\nJakarta Pusat", $renderedHtml);
+        $this->assertStringNotContainsString('Jl. Sudirman Lama No. 1', $renderedHtml);
+    }
+
     private function createQuotation(User $user): Quotation
     {
         $template = $this->template();

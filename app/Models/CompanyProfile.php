@@ -21,4 +21,28 @@ class CompanyProfile extends Model
     {
         return $this->hasMany(DocumentTemplate::class);
     }
+
+    /** @return array<string, mixed> */
+    public function snapshot(): array
+    {
+        return [
+            'id' => $this->getKey(),
+            'company_code' => $this->company_code,
+            'legal_name' => $this->legal_name,
+            'display_name' => $this->display_name,
+            'address_lines' => $this->address_lines,
+            'city' => $this->city,
+            'postal_code' => $this->postal_code,
+            'country' => $this->country,
+            'email' => $this->email,
+            'phone' => $this->phone,
+            'website' => $this->website,
+            'bank_information' => $this->bank_information,
+            'logo_path' => $this->logo_path,
+            'logo_sha256' => $this->logo_sha256,
+            'stamp_path' => $this->stamp_path,
+            'stamp_sha256' => $this->stamp_sha256,
+            'primary_color' => $this->primary_color,
+        ];
+    }
 }

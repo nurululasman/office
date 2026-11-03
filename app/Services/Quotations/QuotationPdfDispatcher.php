@@ -36,6 +36,8 @@ final class QuotationPdfDispatcher
 
     public function regenerate(Quotation $quotation, User $actor): GeneratedFile
     {
+        $quotation->refreshCompanyProfileSnapshot();
+
         $path = "quotations/{$quotation->getKey()}/quotation.pdf";
         $file = GeneratedFile::query()->firstOrCreate(
             ['owner_type' => $quotation->getMorphClass(), 'owner_id' => $quotation->getKey(), 'kind' => 'quotation_pdf', 'path' => $path],
